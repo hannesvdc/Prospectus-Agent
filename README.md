@@ -180,3 +180,7 @@ and the strict tool schemas.
 - Single-tenant and local; a configurable hosted version may come later.
 
 Built it for myself; sharing it in case your prospecting mornings look like mine did.
+
+## Contribute
+Contributions are very welcome! This is supposed to be a shared project. Many businesses are facing
+the same struggles, let's help each other!
