@@ -38,6 +38,17 @@ def test_discovery_build_user_empty_deny():
     assert "(none yet)" in out
 
 
+def test_discovery_build_user_includes_avoid_block():
+    out = dprompt.build_user("p", [], "x", ["aerospace, defense, and aviation"])
+    assert "HARD EXCLUSION" in out
+    assert "aerospace, defense, and aviation" in out
+
+
+def test_discovery_build_user_no_avoid_block_when_empty():
+    out = dprompt.build_user("p", [], "x")
+    assert "HARD EXCLUSION" not in out
+
+
 def test_research_build_user_includes_company_sender_canspam():
     cand = Candidate(name="Acme", domain="acme.com", industry="Aero",
                      why_fit="CFD", fit_score=9, suggested_applications=["GPU CFD"])

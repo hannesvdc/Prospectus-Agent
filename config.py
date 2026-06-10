@@ -22,6 +22,11 @@ def _int(name: str, default: int) -> int:
         return default
 
 
+def _list(name: str) -> list[str]:
+    """Comma-separated env var -> lowercased list (empty if unset)."""
+    return [s.strip().lower() for s in os.getenv(name, "").split(",") if s.strip()]
+
+
 # --- Secrets ---------------------------------------------------------------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
@@ -44,6 +49,12 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-5.5").strip()
 TARGET_REGION = os.getenv("TARGET_REGION", "North America").strip()
 FIT_SCORE_THRESHOLD = _int("FIT_SCORE_THRESHOLD", 7)
 TARGET_COMPANY_COUNT = _int("TARGET_COMPANY_COUNT", 5)
+# Max companies from any one sector among a day's picks (diversifier).
+MAX_PER_SECTOR = _int("MAX_PER_SECTOR", 2)
+# Sector bucket keys to exclude entirely (see sectors.py for valid keys), e.g.
+# "aerospace_defense". Avoided-but-qualified companies are kept as backlog, so
+# removing a sector here makes them eligible again.
+AVOID_SECTORS = _list("AVOID_SECTORS")
 MAX_DISCOVERY_CALLS = _int("MAX_DISCOVERY_CALLS", 3)
 FOLLOWUP_BUSINESS_DAYS = _int("FOLLOWUP_BUSINESS_DAYS", 5)
 DB_PATH = os.getenv("DB_PATH", "prospects.db").strip()

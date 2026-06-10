@@ -181,6 +181,14 @@ def set_status(
     return cur.rowcount > 0
 
 
+def companies_by_status(conn: sqlite3.Connection, status: str) -> list[sqlite3.Row]:
+    """All companies in a given status, highest fit_score first."""
+    return conn.execute(
+        "SELECT * FROM companies WHERE status=? ORDER BY fit_score DESC, first_seen",
+        (status,),
+    ).fetchall()
+
+
 def companies_awaiting_followup(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     """Companies marked 'sent' with a contact date set (business-day math is
     done by the caller, which knows the threshold)."""

@@ -28,9 +28,16 @@ SYSTEM = (
 )
 
 
-def build_user(on_profile: str, deny: list[dict], angle: str) -> str:
+def build_user(on_profile: str, deny: list[dict], angle: str, avoid_labels=None) -> str:
     deny_lines = "\n".join(f"- {d['name']} ({d['domain']})" for d in deny) or "(none yet)"
     services = "\n".join(f"- {a}" for a in config.ON_SERVICE_AREAS)
+    avoid_block = ""
+    if avoid_labels:
+        avoid_block = (
+            "\nHARD EXCLUSION — do NOT return any companies in these sectors: "
+            + "; ".join(avoid_labels)
+            + ". Skip them entirely, even if they look like a strong fit.\n"
+        )
     return f"""About Open Numerics (current profile):
 {on_profile}
 
@@ -41,7 +48,7 @@ TASK: Use web search to find up to 10 {config.TARGET_REGION}-based companies tha
 would BENEFIT FROM ON's services — i.e. companies with their own engineering,
 R&D, or scientific problems that simulation / UQ / scientific ML / GPU-HPC could
 help solve. Focus this round on: {angle}.
-
+{avoid_block}
 EXCLUDE companies whose own business is providing these capabilities — simulation
 / CFD / FEA / UQ / scientific-ML / HPC consultancies, software vendors, and
 research-software houses. They are ON's competitors, not its clients. If you list
@@ -64,6 +71,10 @@ For each company:
 
 Do NOT include any of these already-seen companies:
 {deny_lines}
+
+Spread your picks across DISTINCT industries within this focus area — avoid
+returning many companies from a single niche (e.g. don't return all commercial
+aviation; mix in defense, automotive, energy, etc.).
 
 Prioritise strong, defensible fits over filling a quota. When done, call the
 `submit_candidates` tool with your results.

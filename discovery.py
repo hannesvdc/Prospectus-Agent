@@ -1,18 +1,27 @@
 """Discovery: the bounded web-search loop that surfaces new prospect companies.
 
-At most MAX_DISCOVERY_CALLS rounds. Each round is ONE logical API call (the
-server-side web_search loop and any pause_turn resumes count as part of it).
-Each round rotates the industry angle, asks for a batch of scored candidates,
-filters to score >= threshold and not-already-seen, and accumulates until we
-have TARGET_COMPANY_COUNT qualified companies or run out of rounds.
+At most MAX_DISCOVERY_CALLS rounds. Each round is ONE logical API call, rotates
+the industry angle (with a per-day offset so the lead sector varies), and returns
+a batch of scored candidates. We accumulate qualified, newly-seen companies as
+"winners" until we have TARGET_COMPANY_COUNT or run out of rounds.
+
+Diversifier: no more than MAX_PER_SECTOR winners may share a sector (classified
+from the company's industry), so a single sector (e.g. aviation) can't dominate
+a day's picks. Qualified companies that don't make the cut are still stored as
+'new' — a backlog that future runs draft first (also subject to the cap), so good
+leads aren't wasted.
 
 Every candidate returned — fit or not — is written to the DB so it never
 resurfaces. Qualified, newly-seen companies are returned as "winners".
 """
 from __future__ import annotations
 
+import json
+from datetime import date
+
 import config
 import db
+import sectors
 from llm import WEB_SEARCH_TOOL, run_with_submit
 from prompts import discovery as discovery_prompts
 from schemas import Candidate, DiscoveryResult
@@ -84,18 +93,63 @@ SUBMIT_CANDIDATES_TOOL = {
     },
 }
 
+def _row_to_candidate(row) -> Candidate:
+    """Reconstruct a Candidate from a stored backlog row."""
+    return Candidate(
+        name=row["name"],
+        domain=row["domain"],
+        hq_location=row["hq_location"] or "",
+        industry=row["industry"] or "",
+        why_fit=row["why_fit"] or "",
+        suggested_applications=json.loads(row["suggested_applications"] or "[]"),
+        fit_score=row["fit_score"] or 0,
+        source_urls=json.loads(row["source_urls"] or "[]"),
+    )
+
+
 def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
     """Run the discovery loop. Returns a list of (company_id, Candidate) for the
-    qualified, newly-seen winners (up to TARGET_COMPANY_COUNT)."""
+    qualified winners (up to TARGET_COMPANY_COUNT), diversified across sectors."""
     seen = db.get_seen_domains(conn)
     deny = db.deny_list(conn)
     winners: list[tuple[int, Candidate]] = []
+    sector_counts: dict[str, int] = {}
 
+    def try_select(cid: int, cand: Candidate) -> bool:
+        """Add as a winner unless the target is met, its sector is avoided, or
+        its sector is already at the per-sector cap."""
+        if len(winners) >= config.TARGET_COMPANY_COUNT:
+            return False
+        bucket = sectors.classify(cand.industry, cand.why_fit)
+        if bucket in config.AVOID_SECTORS:
+            return False
+        if sector_counts.get(bucket, 0) >= config.MAX_PER_SECTOR:
+            return False
+        winners.append((cid, cand))
+        sector_counts[bucket] = sector_counts.get(bucket, 0) + 1
+        return True
+
+    # 1) Drain the backlog first: previously-found qualified companies that were
+    #    never drafted (e.g. capped on an earlier day). Subject to the same cap.
+    backlog = db.companies_by_status(conn, "new")
+    seeded = 0
+    for row in backlog:
+        if len(winners) >= config.TARGET_COMPANY_COUNT:
+            break
+        if try_select(row["id"], _row_to_candidate(row)):
+            seeded += 1
+    if seeded:
+        print(f"  Seeded {seeded} prospect(s) from the backlog (status=new).")
+
+    # 2) Fresh discovery rounds, rotating the lead sector by day.
+    avoid_labels = [sectors.label(b) for b in config.AVOID_SECTORS]
+    angles = discovery_prompts.INDUSTRY_ANGLES
+    offset = date.today().toordinal() % len(angles)
     for round_idx in range(config.MAX_DISCOVERY_CALLS):
         if len(winners) >= config.TARGET_COMPANY_COUNT:
             break
 
-        angle = discovery_prompts.INDUSTRY_ANGLES[round_idx % len(discovery_prompts.INDUSTRY_ANGLES)]
+        angle = angles[(offset + round_idx) % len(angles)]
         print(f"  Discovery round {round_idx + 1}/{config.MAX_DISCOVERY_CALLS} "
               f"({len(winners)}/{config.TARGET_COMPANY_COUNT} so far) — {angle.split('(')[0].strip()}")
 
@@ -103,7 +157,7 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
             client,
             model=config.MODEL,
             system=discovery_prompts.SYSTEM,
-            user_text=discovery_prompts.build_user(on_profile, deny, angle),
+            user_text=discovery_prompts.build_user(on_profile, deny, angle, avoid_labels),
             tools=[WEB_SEARCH_TOOL, SUBMIT_CANDIDATES_TOOL],
             submit_tool_name="submit_candidates",
         )
@@ -145,8 +199,9 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
                 status=status,
             )
             new_this_round += 1
-            if qualified and len(winners) < config.TARGET_COMPANY_COUNT:
-                winners.append((cid, cand))
+            # Qualified-but-not-selected stays 'new' (a backlog for a future run).
+            if qualified:
+                try_select(cid, cand)
 
         print(f"    +{new_this_round} new companies seen this round")
 

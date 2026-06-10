@@ -17,7 +17,11 @@ You send all emails yourself; the agent only finds companies and prepares drafts
    reflect ON's current services.
 2. **Discover** — up to 3 web-search rounds (`MAX_DISCOVERY_CALLS`) to find up to
    5 (`TARGET_COMPANY_COUNT`) companies scoring ≥ 7/10 (`FIT_SCORE_THRESHOLD`),
-   rotating industry angle each round and skipping anything already in the DB.
+   rotating industry angle each round (with a per-day offset) and skipping
+   anything already in the DB. A **diversifier** caps how many picks share a
+   sector (`MAX_PER_SECTOR`, default 2) so one sector (e.g. aviation) can't
+   dominate; qualified-but-capped companies become a backlog that future runs
+   draft first.
 3. **Research + draft** — for each winner, reads its site + leadership, stores
    contacts (public emails + pattern-guessed exec addresses), and drafts a
    tailored, CAN-SPAM-compliant initial email.
@@ -50,6 +54,8 @@ The agent reads config from `.env` (gitignored). Key fields:
 | `OPENAI_MODEL` | Model id (default `gpt-5.5`, OpenAI's recommended model for web search) |
 | `SENDER_NAME` / `SENDER_EMAIL` / `SENDER_PHYSICAL_ADDRESS` | Used in the email sign-off; the physical address is required for CAN-SPAM |
 | `FIT_SCORE_THRESHOLD`, `TARGET_COMPANY_COUNT`, `MAX_DISCOVERY_CALLS`, `FOLLOWUP_BUSINESS_DAYS` | Pipeline tunables |
+| `MAX_PER_SECTOR` | Max picks from one sector per day (diversifier; default 2) |
+| `AVOID_SECTORS` | Comma-separated sector keys to exclude entirely (e.g. `aerospace_defense`). Avoided-but-qualified companies are kept as reversible backlog. Valid keys are in `sectors.py`. |
 
 ## Daily use
 
@@ -76,7 +82,8 @@ Reply tracking is fully manual — the agent never reads your inbox.
 | `db.py` | SQLite layer (companies, contacts, emails) |
 | `llm.py` | OpenAI Responses API helpers (web_search + strict submit-tool extraction) |
 | `on_profile.py` | Daily ON profile refresh |
-| `discovery.py` | Bounded web-search discovery loop |
+| `discovery.py` | Bounded web-search discovery loop + per-sector diversifier + backlog seeding |
+| `sectors.py` | Keyword sector classifier (powers the diversifier) |
 | `research.py` | Per-winner grounding + initial-email drafting |
 | `drafting.py` | Signature, CAN-SPAM guidance, follow-up drafting |
 | `contacts.py` | Email-pattern guessing |
