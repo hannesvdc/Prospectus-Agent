@@ -1,19 +1,27 @@
 """Prompts for per-winner research + initial-email drafting."""
 from __future__ import annotations
 
-SYSTEM = (
-    "You research a single prospect company for Open Numerics and draft a "
-    "tailored cold outreach email. You ground every claim in what you actually "
-    "find on the company's site and public sources — never fabricate facts, "
-    "people, or email addresses. If you can't verify something, leave it out."
-)
+import agent_profile as profile
+
+
+def system() -> str:
+    return (
+        f"You research a single prospect company for {profile.NAME} and draft a "
+        "tailored cold outreach email. You ground every claim in what you actually "
+        "find on the company's site and public sources — never fabricate facts, "
+        "people, or email addresses. If you can't verify something, leave it out."
+    )
 
 
 def build_user(cand, on_profile: str) -> str:
     """`cand` is a schemas.Candidate (duck-typed: name/domain/industry/why_fit/
     suggested_applications)."""
     apps = "\n".join(f"- {a}" for a in cand.suggested_applications) or "(none yet)"
-    return f"""About Open Numerics:
+    credibility_note = (
+        f' Naturally work in one brief credibility line — for example: "{profile.CREDIBILITY}".'
+        if profile.CREDIBILITY else ""
+    )
+    return f"""About {profile.NAME}:
 {on_profile}
 
 Prospect company: {cand.name}
@@ -29,7 +37,7 @@ couple of focused searches for the company's senior people. That's enough — do
 crawl the whole site. Confirm what they do and who leads engineering / R&D.
 
 STEP 2 — Return, via `submit_company_outreach`:
-- refined_applications: 2-4 specific, honest ways ON could help, tied to their real work.
+- refined_applications: 2-4 specific, honest ways {profile.NAME} could help, tied to their real work.
 - public_emails: at most ONE generic inbox published on their site (e.g. info@/contact@).
 - people: the 3 most senior / relevant decision-makers (e.g. CEO, CTO, VP/Head of
   Engineering or R&D) — no more than 3, with name + title. Include public_email
@@ -37,11 +45,11 @@ STEP 2 — Return, via `submit_company_outreach`:
 - A tailored initial email:
     * email_subject: accurate, specific, non-spammy.
     * email_body: ~120-180 words. Warm and concrete. Open with why you're reaching
-      out to THEM specifically (reference their real work), name 1-2 concrete ON
-      applications, and end with a low-pressure ask for a short call. Use a neutral
-      greeting ("Hi there,") since the sender chooses the recipient. You may end
-      with a short closing line like "Best,". Do NOT add a signature, sender name,
-      title, company, contact details, or postal address — the sender's email
-      client appends their own signature on send.
+      out to THEM specifically (reference their real work), name 1-2 concrete things
+      {profile.NAME} could do, and end with a low-pressure ask for a short call. Use a
+      neutral greeting ("Hi there,") since the sender chooses the recipient.{credibility_note}
+      You may end with a short closing like "Best,". Do NOT add a signature, sender name,
+      title, company, contact details, or postal address — the sender's email client
+      appends their own signature on send.
 - draft_notes: anything the sender should know before sending.
 """

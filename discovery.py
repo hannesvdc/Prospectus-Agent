@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 from datetime import date
 
+import agent_profile as profile
 import config
 import db
 import sectors
@@ -152,7 +153,7 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
 
     # 2) Fresh discovery rounds, rotating the lead sector by day.
     avoid_labels = [sectors.label(b) for b in config.AVOID_SECTORS]
-    angles = discovery_prompts.INDUSTRY_ANGLES
+    angles = profile.INDUSTRY_ANGLES
     offset = date.today().toordinal() % len(angles)
     for round_idx in range(config.MAX_DISCOVERY_CALLS):
         if len(winners) >= config.TARGET_COMPANY_COUNT:
@@ -165,7 +166,7 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
         raw = run_with_submit(
             client,
             model=config.DISCOVERY_MODEL,
-            system=discovery_prompts.SYSTEM,
+            system=discovery_prompts.system(),
             user_text=discovery_prompts.build_user(on_profile, deny, angle, avoid_labels),
             tools=[WEB_SEARCH_TOOL, SUBMIT_CANDIDATES_TOOL],
             submit_tool_name="submit_candidates",

@@ -15,9 +15,16 @@ from schemas import Candidate
 
 
 def test_discovery_system_carries_provider_distinction():
-    assert dprompt.SYSTEM
-    assert "is_service_provider" in dprompt.SYSTEM
-    assert "competitor" in dprompt.SYSTEM.lower()
+    sys = dprompt.system()
+    assert sys
+    assert "is_service_provider" in sys
+    assert "competitor" in sys.lower()
+
+
+def test_prompts_use_profile_name(monkeypatch):
+    import agent_profile
+    monkeypatch.setattr(agent_profile, "NAME", "Acme Consulting")
+    assert "Acme Consulting" in dprompt.system()
 
 
 def test_discovery_build_user_interpolates():
@@ -59,6 +66,25 @@ def test_research_build_user_includes_company_and_omits_signature():
     assert "Do NOT add a signature" in out
 
 
+def test_research_build_user_includes_credibility(monkeypatch):
+    import agent_profile
+    monkeypatch.setattr(agent_profile, "CREDIBILITY", "20 years building widgets")
+    cand = Candidate(name="Acme", domain="acme.com", why_fit="x", fit_score=9,
+                     suggested_applications=["y"])
+    out = rprompt.build_user(cand, "BRIEF")
+    assert "20 years building widgets" in out
+    assert "credibility" in out.lower()
+
+
+def test_research_build_user_omits_credibility_when_unset(monkeypatch):
+    import agent_profile
+    monkeypatch.setattr(agent_profile, "CREDIBILITY", "")
+    cand = Candidate(name="Acme", domain="acme.com", why_fit="x", fit_score=9,
+                     suggested_applications=["y"])
+    out = rprompt.build_user(cand, "BRIEF")
+    assert "credibility line" not in out.lower()
+
+
 def test_followup_build_user_interpolates_and_omits_signature():
     row = {"name": "Acme", "domain": "acme.com", "last_contact_date": "2026-06-01"}
     out = fprompt.build_user(row, "PRIOR EMAIL TEXT", "ON PROFILE")
@@ -66,7 +92,7 @@ def test_followup_build_user_interpolates_and_omits_signature():
     assert "PRIOR EMAIL TEXT" in out
     assert "submit_followup" in out
     assert str(config.FOLLOWUP_BUSINESS_DAYS) in out
-    assert "do NOT add" in out
+    assert "NOT add a signature" in " ".join(out.split())  # no-signature instruction
 
 
 def test_on_profile_build_user_includes_url():

@@ -17,6 +17,7 @@ from __future__ import annotations
 import sys
 from datetime import date
 
+import agent_profile
 import config
 import db
 import discovery
@@ -65,7 +66,7 @@ def _print_digest(winners_summaries: list[dict], followup_summaries: list[dict])
 
 
 def main() -> int:
-    print(f"Open Numerics prospecting agent — {date.today().isoformat()}\n")
+    print(f"{agent_profile.NAME} prospecting agent — {date.today().isoformat()}\n")
 
     try:
         config.require_api_key()
@@ -78,7 +79,7 @@ def main() -> int:
     db.init_db( conn )
     llm.reset_usage()
 
-    print("Refreshing Open Numerics profile...")
+    print(f"Refreshing {agent_profile.NAME} profile...")
     profile = on_profile.refresh_profile( client )
 
     print("\nDiscovering prospects...")

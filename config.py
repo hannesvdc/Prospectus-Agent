@@ -30,13 +30,9 @@ def _list(name: str) -> list[str]:
 # --- Secrets ---------------------------------------------------------------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
-# --- Open Numerics profile -------------------------------------------------
-ON_WEBSITE_URL = os.getenv("ON_WEBSITE_URL", "https://opennumerics.com").strip()
-ON_PROFILE_CACHE = "on_profile_cache.json"
-
-# The company the agent is pitching (NOT sender identity — the user's own email
-# signature supplies their name/title/contact/address on send).
-COMPANY_NAME = os.getenv("COMPANY_NAME", "Open Numerics").strip()
+# Cache file for the company brief fetched from the website (see on_profile.py).
+# Company identity / offerings / targeting live in profile.yaml (agent_profile.py).
+BRIEF_CACHE = "company_brief_cache.json"
 
 # --- Pipeline tunables -----------------------------------------------------
 # gpt-5.4-mini is ~6.6x cheaper than gpt-5.5 and plenty for scoring + short email
@@ -82,16 +78,6 @@ MAX_PEOPLE = _int("MAX_PEOPLE", 3)                    # named senior people
 GUESSES_PER_PERSON = _int("GUESSES_PER_PERSON", 1)    # guessed addresses per person
 FOLLOWUP_BUSINESS_DAYS = _int("FOLLOWUP_BUSINESS_DAYS", 5)
 DB_PATH = os.getenv("DB_PATH", "prospects.db").strip()
-
-# What ON does — used to ground every prompt even before the live profile
-# refresh succeeds. Kept short and factual.
-ON_SERVICE_AREAS = [
-    "numerical simulation (CFD, FEA, multiphysics, custom solvers)",
-    "uncertainty quantification (UQ) and sensitivity analysis",
-    "scientific machine learning (physics-informed / surrogate models)",
-    "GPU acceleration of scientific and engineering compute",
-    "high-performance and parallel computing for modelling workloads",
-]
 
 
 def size_rank(size: str) -> int:

@@ -1,0 +1,52 @@
+# Seller profile — describe YOUR business and who you want to prospect.
+# Copy this to `profile.yaml` and edit. Everything domain-specific lives here;
+# the engine code is generic. (If profile.yaml is absent, this example is used.)
+
+company:
+  name: Open Numerics
+  website: https://opennumerics.com
+  # Short noun phrase describing what kind of company you are (used in prompts).
+  positioning: a boutique scientific-computing consultancy
+  # A brief trust/credibility line woven into every outreach email (optional).
+  credibility: >
+    Our team has many years of hands-on experience in numerical simulation,
+    uncertainty quantification, scientific machine learning, and GPU/HPC.
+  # Fallback description, used only if the website can't be fetched.
+  description: >
+    Open Numerics provides specialist scientific-computing services: numerical
+    simulation, uncertainty quantification, scientific machine learning, and
+    GPU/HPC acceleration for engineering and research workloads.
+  # What you sell — used to ground fit assessment and email drafting.
+  offerings:
+    - numerical simulation (CFD, FEA, multiphysics, custom solvers)
+    - uncertainty quantification (UQ) and sensitivity analysis
+    - scientific machine learning (physics-informed / surrogate models)
+    - GPU acceleration of scientific and engineering compute
+    - high-performance and parallel computing for modelling workloads
+
+targeting:
+  # Who is a GOOD prospect — end-users with their own problems you could solve.
+  ideal_customer: >
+    Companies with their own engineering, R&D, or scientific problems that heavy
+    simulation, uncertainty quantification, scientific ML, or GPU/HPC compute
+    could solve — e.g. a turbine manufacturer, a battery startup, a drug developer.
+  # Who to EXCLUDE — competitors who sell the same thing (not clients).
+  exclude_competitors: >
+    Companies whose own product or service is simulation / CFD / FEA / UQ /
+    scientific-ML / HPC consulting or software.
+  # Per-round search focus, rotated across discovery rounds (and by day).
+  industry_angles:
+    - aerospace, defense, automotive, and energy (turbomachinery, CFD, structures)
+    - pharma, biotech, medical devices, and materials science (molecular/process modelling)
+    - semiconductors, electronics, climate/geoscience, and quantitative finance
+  # Household-name giants to steer away from (used as examples in the prompt).
+  too_big_examples:
+    - General Motors
+    - Boeing
+    - Pfizer
+    - ExxonMobil
+
+# OPTIONAL — override the sector taxonomy used by the diversifier. Omit to use
+# the built-in default (engineering/science oriented). Map: bucket -> [keywords].
+# sectors:
+#   my_sector: [keyword one, keyword two]

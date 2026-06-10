@@ -75,7 +75,7 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
     raw = run_with_submit(
         client,
         model=config.MODEL,
-        system=research_prompts.SYSTEM,
+        system=research_prompts.system(),
         user_text=research_prompts.build_user(cand, on_profile),
         tools=[WEB_SEARCH_TOOL, SUBMIT_OUTREACH_TOOL],
         submit_tool_name="submit_company_outreach",

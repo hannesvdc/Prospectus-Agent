@@ -1,36 +1,31 @@
-"""Prompts for the discovery loop (finding prospective client companies)."""
+"""Prompts for the discovery loop (finding prospective client companies).
+
+All seller/ICP specifics come from agent_profile (profile.yaml); this module
+just templatizes them.
+"""
 from __future__ import annotations
 
+import agent_profile as profile
 import config
 
-# Rotated so successive rounds don't re-mine the same corner of the market.
-INDUSTRY_ANGLES = [
-    "aerospace, defense, automotive, and energy (turbomachinery, CFD, structures)",
-    "pharma, biotech, medical devices, and materials science (molecular/process modelling)",
-    "semiconductors, electronics, climate/geoscience, and quantitative finance",
-]
 
-SYSTEM = (
-    "You are a B2B lead-generation researcher for Open Numerics (ON), a "
-    "scientific-computing consultancy. You search the web for potential CLIENTS "
-    "for ON — companies that have hard physical/engineering/scientific problems "
-    "ON could be hired to solve — and assess fit honestly.\n\n"
-    "CRITICAL DISTINCTION: ON's clients are end-users with in-house R&D, "
-    "engineering, or product-development needs (e.g. a turbine manufacturer, a "
-    "battery startup, a drug developer). They are NOT companies that themselves "
-    "sell simulation, uncertainty quantification, scientific ML, CFD/FEA, or "
-    "HPC/GPU services or software — those are ON's peers and competitors, not "
-    "clients. If a company's PRODUCT or SERVICE is the modelling itself, it is "
-    "not a lead: set is_service_provider=true. ON wants the company with the "
-    "engineering problem, not the company that sells the solution.\n\n"
-    "You never invent companies, domains, or facts — every candidate must be a "
-    "real company you can cite, and fit claims must follow from what you find."
-)
+def system() -> str:
+    return (
+        f"You are a B2B lead-generation researcher for {profile.NAME}, "
+        f"{profile.POSITIONING}. You search the web for potential CLIENTS — "
+        "companies that would benefit from what they offer — and assess fit honestly.\n\n"
+        f"WHO IS A GOOD CLIENT: {profile.IDEAL_CUSTOMER}\n\n"
+        f"WHO TO EXCLUDE (competitors, NOT clients): {profile.EXCLUDE_COMPETITORS} "
+        "If a company is one of these, set is_service_provider=true — it will be filtered out.\n\n"
+        "You never invent companies, domains, or facts — every candidate must be a "
+        "real company you can cite, and fit claims must follow from what you find."
+    )
 
 
 def build_user(on_profile: str, deny: list[dict], angle: str, avoid_labels=None) -> str:
     deny_lines = "\n".join(f"- {d['name']} ({d['domain']})" for d in deny) or "(none yet)"
-    services = "\n".join(f"- {a}" for a in config.ON_SERVICE_AREAS)
+    offerings = "\n".join(f"- {a}" for a in profile.OFFERINGS)
+    too_big = ", ".join(profile.TOO_BIG_EXAMPLES) or "household-name multinational giants"
     avoid_block = ""
     if avoid_labels:
         avoid_block = (
@@ -38,50 +33,41 @@ def build_user(on_profile: str, deny: list[dict], angle: str, avoid_labels=None)
             + "; ".join(avoid_labels)
             + ". Skip them entirely, even if they look like a strong fit.\n"
         )
-    return f"""About Open Numerics (current profile):
+    return f"""About {profile.NAME} (current profile):
 {on_profile}
 
-ON's core service areas:
-{services}
+What {profile.NAME} offers:
+{offerings}
 
 TASK: Use web search (a few focused searches — don't over-search) to find up to 6
-{config.TARGET_REGION}-based companies that would BENEFIT FROM ON's services —
-i.e. companies with their own engineering, R&D, or scientific problems that
-simulation / UQ / scientific ML / GPU-HPC could help solve. Focus this round
-on: {angle}. Keep `why_fit` to one sentence and `suggested_applications` short.
+{config.TARGET_REGION}-based companies that would BENEFIT FROM what {profile.NAME}
+offers — i.e. companies with their own problems that its services could solve.
+Focus this round on: {angle}. Keep `why_fit` to one sentence and
+`suggested_applications` short.
 {avoid_block}
-EXCLUDE companies whose own business is providing these capabilities — simulation
-/ CFD / FEA / UQ / scientific-ML / HPC consultancies, software vendors, and
-research-software houses. They are ON's competitors, not its clients. If you list
-such a company at all, set is_service_provider=true (it will be filtered out).
-ON wants, e.g., the aerospace OEM that needs better CFD — NOT the firm that sells
-CFD software.
+EXCLUDE companies whose own business is providing what {profile.NAME} sells — they
+are competitors, not clients. Set is_service_provider=true for them.
 
-SIZE: ON is a boutique consultancy. Target small-to-mid-sized companies, startups,
-scale-ups, and focused divisions — NOT household-name multinational giants (e.g.
-General Motors, Boeing, Pfizer, ExxonMobil), which have large in-house teams and
-aren't realistic clients. Estimate each company's size honestly.
+SIZE: {profile.NAME} sells to small-to-mid-sized companies, startups, scale-ups,
+and focused divisions — NOT household-name giants (e.g. {too_big}), which have
+large in-house teams and aren't realistic clients. Estimate each company's size honestly.
 
 For each company:
 - Give the real name and primary website domain (e.g. acme.com).
 - Set company_size honestly (startup / small / mid / large / enterprise).
-- Set is_service_provider: true if the company itself sells modelling/UQ/ML/HPC
-  services or software; false if it is a potential client with its own problems.
-- Score fit from 0-10. Reserve {config.FIT_SCORE_THRESHOLD}+ for end-user companies
-  whose actual work clearly involves heavy simulation, modelling, UQ, scientific
-  ML, or GPU/HPC compute that they'd plausibly outsource. Be discerning — a high
-  score must be defensible.
-- In `why_fit`, explain the specific reason, grounded in what you found.
-- In `suggested_applications`, list 2-4 concrete things ON could do for THIS
-  company, tied to ON's services and the company's real activities.
+- Set is_service_provider per the rule above.
+- Score fit 0-10. Reserve {config.FIT_SCORE_THRESHOLD}+ for end-user companies whose
+  actual work is a clear, defensible fit for {profile.NAME}'s offering.
+- In `why_fit`, give the specific reason, grounded in what you found.
+- In `suggested_applications`, list 2-4 concrete things {profile.NAME} could do for
+  THIS company, tied to its offering and the company's real activities.
 - Include source_urls that back up your assessment.
+
+Spread your picks across DISTINCT industries within this focus area — avoid
+returning many companies from a single niche.
 
 Do NOT include any of these already-seen companies:
 {deny_lines}
-
-Spread your picks across DISTINCT industries within this focus area — avoid
-returning many companies from a single niche (e.g. don't return all commercial
-aviation; mix in defense, automotive, energy, etc.).
 
 Prioritise strong, defensible fits over filling a quota. When done, call the
 `submit_candidates` tool with your results.

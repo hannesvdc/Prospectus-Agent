@@ -9,6 +9,7 @@ authors = [{ name = "Hannes Vandecasteele" }]
 dependencies = [
     "openai>=2.41.0",
     "python-dotenv>=1.2.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

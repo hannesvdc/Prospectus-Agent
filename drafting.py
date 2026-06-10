@@ -39,7 +39,7 @@ def draft_followup(client, conn, company_row, on_profile: str):
     raw = run_with_submit(
         client,
         model=config.MODEL,
-        system=followup_prompts.SYSTEM,
+        system=followup_prompts.system(),
         user_text=followup_prompts.build_user(company_row, prior_block, on_profile),
         tools=[SUBMIT_FOLLOWUP_TOOL],
         submit_tool_name="submit_followup",

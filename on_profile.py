@@ -1,8 +1,8 @@
-"""Keep a fresh, cached profile of Open Numerics' own positioning.
+"""Keep a fresh, cached brief of the seller company's own positioning.
 
-Fetched from the live website at most every PROFILE_REFRESH_DAYS days (it rarely
-changes) so drafts reflect ON's services without paying a web-search call every
-run. Falls back to the static ON_SERVICE_AREAS list in config if the fetch fails.
+Fetched from the website (from profile.yaml) at most every PROFILE_REFRESH_DAYS
+days so drafts reflect current services without a web-search call every run.
+Falls back to the profile's offerings/description if the fetch fails.
 """
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ import json
 import os
 from datetime import date
 
+import agent_profile
 import config
 from llm import WEB_SEARCH_TOOL, run_text
 from prompts import on_profile as on_profile_prompts
@@ -26,21 +27,20 @@ def _cache_is_fresh(cached: dict) -> bool:
 
 
 def _fallback_profile() -> str:
-    areas = "\n".join(f"- {a}" for a in config.ON_SERVICE_AREAS)
-    return (
-        f"{config.COMPANY_NAME} provides specialist scientific-computing "
-        f"services, including:\n{areas}"
-    )
+    if agent_profile.DESCRIPTION:
+        return agent_profile.DESCRIPTION
+    offerings = "\n".join(f"- {a}" for a in agent_profile.OFFERINGS)
+    return f"{agent_profile.NAME} offers:\n{offerings}"
 
 
 def refresh_profile(client, *, force: bool = False) -> str:
-    """Return a concise text profile of ON, refreshing from the website at most
-    every PROFILE_REFRESH_DAYS days. Cached to on_profile_cache.json."""
+    """Return a concise text brief of the seller company, refreshing from the
+    website at most every PROFILE_REFRESH_DAYS days. Cached to BRIEF_CACHE."""
     today = date.today().isoformat()
 
-    if not force and os.path.exists(config.ON_PROFILE_CACHE):
+    if not force and os.path.exists(config.BRIEF_CACHE):
         try:
-            with open(config.ON_PROFILE_CACHE) as f:
+            with open(config.BRIEF_CACHE) as f:
                 cached = json.load(f)
             if _cache_is_fresh(cached):
                 return cached["profile"]
@@ -52,20 +52,20 @@ def refresh_profile(client, *, force: bool = False) -> str:
             client,
             model=config.DISCOVERY_MODEL,
             system=on_profile_prompts.SYSTEM,
-            user_text=on_profile_prompts.build_user(config.ON_WEBSITE_URL),
+            user_text=on_profile_prompts.build_user(agent_profile.WEBSITE),
             tools=[WEB_SEARCH_TOOL],
             max_output_tokens=config.PROFILE_MAX_TOKENS,
             effort=config.DISCOVERY_EFFORT,
         )
     except Exception as e:  # network/API issue — degrade gracefully
-        print(f"  ! ON profile refresh failed ({e}); using static fallback.")
+        print(f"  ! company brief refresh failed ({e}); using profile fallback.")
         return _fallback_profile()
 
     if not profile.strip():
         return _fallback_profile()
 
     try:
-        with open(config.ON_PROFILE_CACHE, "w") as f:
+        with open(config.BRIEF_CACHE, "w") as f:
             json.dump({"date": today, "profile": profile}, f, indent=2)
     except OSError:
         pass
