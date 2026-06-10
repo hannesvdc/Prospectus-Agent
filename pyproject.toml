@@ -1,0 +1,27 @@
+[project]
+name = "prospectus-agent"
+version = "0.1.0"
+description = "Daily AI agent that finds prospective Open Numerics clients and drafts tailored outreach emails."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Hannes Vandecasteele" }]
+dependencies = [
+    "openai>=2.41.0",
+    "python-dotenv>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+]
+
+# This is a script application, not an installable library, so there is no
+# [build-system] / package layout. Install the dependencies into a venv with:
+#   python -m venv .venv
+#   .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
+# The [project] dependencies above are the source of truth that those files mirror.
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

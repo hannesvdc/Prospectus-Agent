@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Prospectus-Agent
+prospects.db
+on_profile_cache.json
