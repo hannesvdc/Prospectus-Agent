@@ -1,100 +1,96 @@
 # Prospectus-Agent
 
-A self-hostable AI prospecting agent. Each day it finds new companies that fit
-**your** business, drafts a tailored outreach email for each (with a short contact
-list), tracks who you've reached out to, and drafts follow-ups when a company
-hasn't replied within five business days.
+*A little agent that does the part of running a business I'm worst at: finding people to email.*
 
-You send all emails yourself; the agent only finds companies and prepares drafts.
+I run [Open Numerics](https://opennumerics.com), a small scientific-computing
+consultancy — simulation, uncertainty quantification, scientific ML, GPU/HPC. We're
+good at the work. We are not good at *prospecting*. Every week I'd lose a morning to
+it: open fifteen tabs, hunt for companies that might need us, get lost, give up,
+fire off three awkward cold emails, and then never follow up. I dreaded it, so I
+mostly just… didn't.
 
-**It's fully configurable.** You describe your business and ideal customer once in
-`profile.yaml` (see `profile.example.yaml`) — what you sell, who's a good fit, who
-to exclude, which industries to focus on — and the agent templatizes everything
-around it. The engine code is generic; nothing about a particular company is
-hardcoded. (The shipped example profile is [Open Numerics](https://opennumerics.com),
-a scientific-computing consultancy — replace it with your own.)
+So I built this. Each morning I run one command and it hands me a short list of
+companies that actually fit, each with a tailored draft email I can skim and send
+from my own inbox. It turned the worst hour of my week into five minutes over coffee.
 
-## Why this exists
+Then I realised nothing in it was really about *me* or my business per se. I pulled all the
+Open-Numerics-specific bits into a single config file. Now it's a tool anyone can
+point at their own business. (The example config that ships with it is Open Numerics;
+swap in your own.)
 
-Cold outreach works — but the grind around it doesn't. The hardest, most expensive
-part isn't writing the email; it's **finding companies that are actually a good
-fit**. That means hours of manual searching every week (or a pricey
-sales-intelligence subscription), and even then most of what you turn up is noise.
-Then each promising lead needs real research before you can write something that
-doesn't read like mail-merge — and the follow-ups, where most replies actually come
-from, quietly slip through the cracks.
+## What it does
 
-This agent takes that whole grind off your plate:
+- Every run, it **searches the web for companies that fit your business**, scores
+  them for fit, spreads them across sectors, and skips anyone you've already seen —
+  no re-surfacing the same names, no bloated lead list to pay for.
+- It **reads each company before writing**, so the draft talks about *their* actual
+  work and concrete ways you could help — not mail-merge filler.
+- It keeps a small local database of who you've contacted and **nudges you to follow
+  up** when a thread goes quiet (that's where most replies come from, and it's the
+  bit I always forgot).
+- It **never sends anything.** You get copy-paste drafts (and `.eml` files you can
+  double-click) and send from your own inbox, in your own voice. I did that on
+  purpose — I don't trust any robot, this one included, to email strangers for me.
+- It runs on a cheap model for **pennies a day**, not a monthly sales-SaaS seat.
 
-- **Finding companies is the costly part — so it does it for you.** Every run it
-  searches the web for genuinely-fitting prospects, scores them, diversifies across
-  sectors, and skips anyone you've already seen — no re-surfacing the same names, no
-  bloated lead list to pay for.
-- **Tailored, not templated.** It reads each company *before* writing, so the draft
-  references their real work and concrete ways you could help — not filler.
-- **Nothing slips.** It tracks who you've contacted and drafts a follow-up the
-  moment a thread goes quiet.
-- **Pennies per day, not a monthly seat.** A run costs cents on a small model —
-  orders of magnitude less than a sales-intelligence platform.
-- **You stay in control.** It never sends anything. You get ready-to-paste drafts
-  (and `.eml` files) and send from your own inbox, in your own voice.
+The honest pitch: it turns *"spend a morning hunting for leads and writing cold
+emails"* into *"skim a few tailored drafts over coffee and hit send."*
 
-In short: it turns "spend a morning hunting for leads and writing cold emails" into
-"skim five tailored drafts over coffee and hit send."
+## Make it yours
+
+You don't edit code. You write one file — **`profile.yaml`** — describing your
+business and who you want to reach: what you sell, who's a good fit, who to *exclude*
+(competitors who do what you do), which industries to focus on, and which giants to
+steer clear of. See `profile.example.yaml` for a fully worked example.
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env                    # then add your OPENAI_API_KEY
+cp profile.example.yaml profile.yaml    # then describe YOUR business + ideal customer
+```
+
+That's the whole setup. If `profile.yaml` is missing, it falls back to the example
+so a fresh clone still runs.
+
+> **Two layers of "template":** `profile.yaml` is the *content* (your business — what
+> you'll edit). `prompts/` holds the actual *prompt templates* — one small Python
+> module per step. Only touch `prompts/` if you want to change the wording or tone of
+> what the agent asks the model.
 
 ## How it works
 
 `python daily_run.py` runs the pipeline:
 
 1. **Refresh profile** — fetches your company's website (cached; default weekly via
-   `PROFILE_REFRESH_DAYS`) so drafts reflect your current services.
+   `PROFILE_REFRESH_DAYS`) so drafts reflect what you currently do.
 2. **Discover** — up to `MAX_DISCOVERY_CALLS` web-search rounds (default 2) to find
    up to `TARGET_COMPANY_COUNT` companies (default 3) scoring ≥ `FIT_SCORE_THRESHOLD`/10,
-   rotating industry angle each round (with a per-day offset) and skipping
-   anything already in the DB. A **diversifier** caps how many picks share a
-   sector (`MAX_PER_SECTOR`, default 2) so one sector (e.g. aviation) can't
-   dominate; qualified-but-capped companies become a backlog that future runs
-   draft first.
-3. **Research + draft** — for each winner, reads its site + leadership, stores
-   contacts (public emails + pattern-guessed exec addresses), and drafts a
-   tailored initial email body. The draft has **no sign-off/signature** — your
-   own mail client appends your signature (name, contact, address) on send.
-4. **Follow-ups** — flags companies marked `sent` with no reply after 5 business
-   days and drafts a follow-up.
-5. Writes ready-to-send drafts to `outbox/<date>/` — `index.md` (each email with
-   its contact list, for copy-paste) plus one `.eml` per email (double-click to
-   open as a pre-filled draft in your mail client).
-6. Prints a digest.
+   rotating the industry angle each round (with a per-day offset) and skipping
+   anything already in the DB. A **diversifier** caps how many picks share one sector
+   (`MAX_PER_SECTOR`, default 2) so a single sector can't take over the list;
+   good-but-capped companies become a backlog that future runs draft first.
+3. **Research + draft** — for each winner it reads the site + leadership, stores a
+   short contact list (one inbox + a few senior people), and drafts a tailored email.
+   The draft has **no sign-off/signature** — your mail client adds yours on send.
+4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
+   and drafts a gentle nudge.
+5. Writes ready-to-send drafts to `outbox/<date>/` — `index.md` (each email with its
+   contacts, for copy-paste) plus one `.eml` per email (double-click to open as a
+   pre-filled draft).
+6. Prints a digest and a token-usage line so you can see what the run cost.
 
-Every company ever seen (fits and non-fits) is stored, so none resurface.
+Every company it ever sees (fits and non-fits) is stored, so none resurface.
 
-### LLM vs. plain Python
-The fuzzy work (finding/scoring companies, drafting) uses the OpenAI Responses
-API (default `gpt-5.4-mini`, the hosted `web_search` tool — which also opens/reads
-pages — and structured output via strict function-tool calls). The bookkeeping
-(SQLite, dedup, follow-up timing) is plain Python, behind the single `llm.py` seam.
+**Under the hood:** the judgment calls (finding/scoring companies, drafting) use the
+OpenAI Responses API (default `gpt-5.4-mini` + the hosted `web_search` tool, with
+structured output via strict function tools). The boring-but-important bookkeeping
+(SQLite, dedup, follow-up timing) is plain Python, behind a single `llm.py` seam.
 
-## Setup
+## Config dials (`.env`)
 
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp .env.example .env          # then fill in OPENAI_API_KEY
-cp profile.example.yaml profile.yaml   # then describe YOUR business + ideal customer
-```
-
-**`profile.yaml`** is where you make the agent yours — company name, what you sell,
-who's a good prospect, who to exclude (competitors), which industries to focus on,
-and giants to avoid. See `profile.example.yaml` for a worked example. (If
-`profile.yaml` is absent, the example is used.)
-
-**Templates live in two places:** `profile.yaml` holds the *content* (your business
-and ICP — what most users edit), and **`prompts/`** holds the *prompt templates*
-themselves — one module per step, plain Python that interpolates your profile. Edit
-`prompts/` only if you want to change the wording, tone, or structure of what the
-agent asks the model.
-
-The rest of the config lives in `.env` (gitignored) — secrets + runtime/cost dials:
+`profile.yaml` is your business; `.env` is the machinery. Secrets and cost/runtime
+knobs live here (gitignored):
 
 | Variable | Purpose |
 |---|---|
@@ -117,7 +113,7 @@ The rest of the config lives in `.env` (gitignored) — secrets + runtime/cost d
 
 .venv/bin/python status.py drafts        # list drafts ready to review
 .venv/bin/python status.py show DOMAIN   # see the full draft + contacts
-# ... you send the email yourself ...
+# ...you read it, maybe tweak it, and send it from your inbox...
 .venv/bin/python status.py mark DOMAIN sent       # starts the follow-up clock
 .venv/bin/python status.py mark DOMAIN replied    # or: not_interested
 ```
@@ -125,26 +121,44 @@ The rest of the config lives in `.env` (gitignored) — secrets + runtime/cost d
 Status values: `new`, `drafted`, `sent`, `replied`, `not_interested`, `not_a_fit`.
 Reply tracking is fully manual — the agent never reads your inbox.
 
-## Files
+## A few honest notes
+
+- **Guessed emails are guesses.** When it can't find a published address it pattern-
+  guesses one (`jane.doe@…`). Most land; some bounce. For anyone important, sanity-
+  check the address before sending.
+- **Garbage in, garbage out.** Lead quality tracks how well you describe your ideal
+  customer in `profile.yaml`. Vague profile → mediocre leads. Spend ten minutes on it.
+- **Watch the cost line.** I burned through $5 in three runs before realising I was
+  using a flagship model for everything. The default is now a cheap model; the token-
+  usage summary at the end of each run is there so you notice early.
+- **Read before you send.** It's good, not infallible — it's writing about companies
+  it researched in seconds. Skim each draft. That's the whole point of "it never sends."
+- **It's single-user and local** (one SQLite file, one inbox). A hosted, multi-tenant
+  version is a someday-maybe, not a today.
+
+## The code
+
+Small and deliberately boring. Engine files know nothing about any particular
+business — everything company-specific lives in `profile.yaml` / `prompts/`.
 
 | File | Role |
 |---|---|
 | `daily_run.py` | Pipeline entrypoint |
 | `status.py` | Manual status CLI |
-| `profile.yaml` / `agent_profile.py` | Your business + ICP (the only thing to edit) and its loader |
+| `profile.yaml` / `agent_profile.py` | Your business + ICP (the thing you edit) and its loader |
+| `prompts/` | Prompt templates, one module per step — edit to change wording/tone |
 | `config.py` | Loads `.env`, constants, OpenAI client |
 | `db.py` | SQLite layer (companies, contacts, emails) |
-| `llm.py` | OpenAI Responses API helpers (web_search + strict submit-tool extraction) |
+| `llm.py` | OpenAI Responses API helpers (web_search + strict tool extraction) |
 | `on_profile.py` | Company website-brief refresh (cached) |
-| `discovery.py` | Bounded web-search discovery loop + per-sector diversifier + backlog seeding |
+| `discovery.py` | The discovery loop + per-sector diversifier + backlog seeding |
 | `sectors.py` | Keyword sector classifier (powers the diversifier) |
-| `research.py` | Per-winner grounding + initial-email drafting |
-| `drafting.py` | Follow-up drafting orchestration |
+| `research.py` | Per-company research + initial-email drafting |
+| `drafting.py` | Follow-up drafting |
 | `contacts.py` | Email-pattern guessing |
 | `followups.py` | Business-day follow-up sweep |
-| `outbox.py` | Writes copy-paste `index.md` + `.eml` drafts after a run |
+| `outbox.py` | Writes the copy-paste `index.md` + `.eml` drafts |
 | `schemas.py` | Pydantic validation models |
-| `prompts/` | All LLM prompt **templates**, one module per step (`discovery`, `research`, `followup`, `on_profile`); each exposes `system()` / `build_user(...)` that interpolate your profile. Edit here to change wording/tone. |
 
 ## Tests
 
@@ -153,17 +167,16 @@ Reply tracking is fully manual — the agent never reads your inbox.
 .venv/bin/python -m pytest
 ```
 
-The suite (in `tests/`) runs offline — the OpenAI client is faked, so no API
-key and no spend. It covers the DB layer (dedup, status, contacts, follow-up
-query), email-pattern guessing, business-day math, the discovery loop (including
-that service-provider/competitor companies are filtered out), per-winner
-research/drafting, the LLM helpers (function-call extraction + submit-tool
-nudge), and strict function-tool schema validity.
+The suite runs **offline** — the OpenAI client is faked, so no key and no spend. It
+covers the database (dedup, status, contacts, follow-up timing), email-pattern
+guessing, business-day math, the discovery loop (including that competitors and
+over-size companies get filtered out), per-company research/drafting, the LLM helpers,
+and the strict tool schemas.
 
-## v1 limitations / next steps
+## Roadmap / known gaps
 
-- Discovery and per-winner research are real API calls — **not yet run live**;
-  the web_search + strict-function-tool flow should be verified end-to-end on a
-  real key (and your chosen model confirmed available to your account).
 - No public-holiday calendar (business days = Mon–Fri).
-- Email guesses are unverified (no SMTP/MX check) — sent at your discretion.
+- Guessed emails aren't SMTP/MX-verified.
+- Single-tenant and local; a configurable hosted version may come later.
+
+Built it for myself; sharing it in case your prospecting mornings look like mine did.
