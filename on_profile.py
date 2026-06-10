@@ -18,7 +18,7 @@ from prompts import on_profile as on_profile_prompts
 def _fallback_profile() -> str:
     areas = "\n".join(f"- {a}" for a in config.ON_SERVICE_AREAS)
     return (
-        f"{config.SENDER['company']} provides specialist scientific-computing "
+        f"{config.COMPANY_NAME} provides specialist scientific-computing "
         f"services, including:\n{areas}"
     )
 

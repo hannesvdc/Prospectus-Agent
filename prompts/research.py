@@ -1,8 +1,6 @@
 """Prompts for per-winner research + initial-email drafting."""
 from __future__ import annotations
 
-from prompts.common import CANSPAM_GUIDANCE, sender_block
-
 SYSTEM = (
     "You research a single prospect company for Open Numerics and draft a "
     "tailored cold outreach email. You ground every claim in what you actually "
@@ -40,10 +38,9 @@ STEP 2 — Return, via `submit_company_outreach`:
     * email_body: ~120-180 words. Warm and concrete. Open with why you're reaching
       out to THEM specifically (reference their real work), name 1-2 concrete ON
       applications, and end with a low-pressure ask for a short call. Use a neutral
-      greeting ("Hi there,") since the sender chooses the recipient. Close with this
-      sign-off (verbatim identity):
-{sender_block()}
+      greeting ("Hi there,") since the sender chooses the recipient. You may end
+      with a short closing line like "Best,". Do NOT add a signature, sender name,
+      title, company, contact details, or postal address — the sender's email
+      client appends their own signature on send.
 - draft_notes: anything the sender should know before sending.
-
-{CANSPAM_GUIDANCE}
 """

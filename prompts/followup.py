@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import config
-from prompts.common import CANSPAM_GUIDANCE, sender_block
 
 SYSTEM = (
     "You write brief, courteous B2B follow-up emails for Open Numerics. "
@@ -22,11 +21,9 @@ We emailed {company_row['name']} ({company_row['domain']}) on
 
 {prior_block}
 
-{sender_block()}
-
-{CANSPAM_GUIDANCE}
-
 Write a short follow-up (about 60-100 words): reference the earlier note briefly,
-restate the single most relevant way ON could help {company_row['name']}, and
-make it easy to decline. Then call `submit_followup`.
+restate the single most relevant way ON could help {company_row['name']}, and make
+it easy to decline. You may end with a short closing like "Best,", but do NOT add
+a signature, sender name, or contact details — the sender's email client appends
+their own signature. Then call `submit_followup`.
 """

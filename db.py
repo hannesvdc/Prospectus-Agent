@@ -254,6 +254,18 @@ def has_email_since(
     return row is not None
 
 
+def emails_on(conn: sqlite3.Connection, date_iso: str) -> list[sqlite3.Row]:
+    """All emails drafted on a given date (initial first, then follow-ups)."""
+    return conn.execute(
+        "SELECT * FROM emails WHERE created_at=? ORDER BY CASE type WHEN 'initial' THEN 0 ELSE 1 END, id",
+        (date_iso,),
+    ).fetchall()
+
+
+def get_company(conn: sqlite3.Connection, company_id: int) -> Optional[sqlite3.Row]:
+    return conn.execute("SELECT * FROM companies WHERE id=?", (company_id,)).fetchone()
+
+
 def latest_email(conn: sqlite3.Connection, company_id: int, type: str) -> Optional[sqlite3.Row]:
     return conn.execute(
         "SELECT * FROM emails WHERE company_id=? AND type=? ORDER BY created_at DESC, id DESC LIMIT 1",

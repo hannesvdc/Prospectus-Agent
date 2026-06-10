@@ -22,6 +22,7 @@ import db
 import discovery
 import followups
 import on_profile
+import outbox
 import research
 
 
@@ -92,6 +93,14 @@ def main() -> int:
     followup_summaries = followups.run_followups( client, conn, profile )
 
     _print_digest( winner_summaries, followup_summaries )
+
+    written = outbox.generate(conn)
+    if written:
+        out_dir, n = written
+        print(f"\n✉  Wrote {n} ready-to-send draft(s) to {out_dir}/")
+        print(f"   • {out_dir}/index.md  — recipients + subject + body, ready to copy-paste")
+        print("   • one .eml per email   — double-click to open as a draft in your mail client")
+
     conn.close()
     return 0
 

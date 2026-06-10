@@ -22,6 +22,13 @@ class Candidate(BaseModel):
         description="Concrete ON applications for this company's work",
     )
     fit_score: int = Field(description="0-10 fit score")
+    company_size: str = Field(
+        default="mid",
+        description=(
+            "Approximate headcount bucket: startup (<50), small (50-200), "
+            "mid (200-1000), large (1000-10000), enterprise (10000+)."
+        ),
+    )
     is_service_provider: bool = Field(
         default=False,
         description=(

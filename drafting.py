@@ -1,5 +1,5 @@
-"""Email-drafting orchestration: the follow-up generator plus a plain-text
-sender signature. Prompt text lives in prompts/ (prompts.followup, prompts.common).
+"""Email-drafting orchestration: the follow-up generator. Prompt text lives in
+prompts/ (prompts.followup).
 """
 from __future__ import annotations
 
@@ -24,22 +24,6 @@ SUBMIT_FOLLOWUP_TOOL = {
         "additionalProperties": False,
     },
 }
-
-
-def build_signature() -> str:
-    """A plain-text signature block from the configured sender identity."""
-    s = config.SENDER
-    lines = []
-    if s["name"]:
-        lines.append(s["name"])
-    title_company = " — ".join(p for p in (s["title"], s["company"]) if p)
-    if title_company:
-        lines.append(title_company)
-    if s["email"]:
-        lines.append(s["email"])
-    if s["physical_address"]:
-        lines.append(s["physical_address"])
-    return "\n".join(lines)
 
 
 def draft_followup(client, conn, company_row, on_profile: str):

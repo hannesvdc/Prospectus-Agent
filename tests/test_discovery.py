@@ -11,7 +11,7 @@ import db
 import discovery
 
 
-def _cand(name, domain, score, *, provider=False, why="reason", industry="Aerospace"):
+def _cand(name, domain, score, *, provider=False, why="reason", industry="Aerospace", size="mid"):
     return {
         "name": name,
         "domain": domain,
@@ -20,6 +20,7 @@ def _cand(name, domain, score, *, provider=False, why="reason", industry="Aerosp
         "why_fit": why,
         "suggested_applications": ["GPU-accelerate CFD"],
         "fit_score": score,
+        "company_size": size,
         "is_service_provider": provider,
         "source_urls": ["http://x"],
     }
@@ -46,8 +47,9 @@ def _seed_defaults(monkeypatch, *, threshold=7, target=5, per_sector=2, calls=1)
     monkeypatch.setattr(config, "TARGET_COMPANY_COUNT", target)
     monkeypatch.setattr(config, "MAX_PER_SECTOR", per_sector)
     monkeypatch.setattr(config, "MAX_DISCOVERY_CALLS", calls)
-    # Isolate tests from whatever AVOID_SECTORS the local .env happens to set.
+    # Isolate tests from whatever the local .env happens to set.
     monkeypatch.setattr(config, "AVOID_SECTORS", [])
+    monkeypatch.setattr(config, "MAX_COMPANY_SIZE", "enterprise")  # allow all sizes
 
 
 def test_qualifies_and_stores_everything(conn, monkeypatch):
@@ -216,6 +218,36 @@ def test_avoid_applies_to_backlog(conn, monkeypatch):
 
     winners = discovery.discover(client=None, conn=conn, on_profile="ON")
     assert [c.domain for _, c in winners] == ["oldcar.com"]
+
+
+def test_excludes_companies_above_size_ceiling(conn, monkeypatch):
+    _seed_defaults(monkeypatch, target=5, calls=1)
+    monkeypatch.setattr(config, "MAX_COMPANY_SIZE", "mid")
+    _stub_rounds(monkeypatch, [
+        {"candidates": [
+            _cand("Giant", "giant.com", 10, industry="Automotive OEM", size="enterprise"),
+            _cand("SmallCo", "smallco.com", 8, industry="Automotive parts", size="small"),
+        ]},
+    ])
+    winners = discovery.discover(client=None, conn=conn, on_profile="ON")
+    assert [c.domain for _, c in winners] == ["smallco.com"]
+    # The giant is stored as not_a_fit (won't recur).
+    assert db.get_company_by_domain(conn, "giant.com")["status"] == "not_a_fit"
+
+
+def test_size_ceiling_is_configurable(conn, monkeypatch):
+    _seed_defaults(monkeypatch, target=5, calls=1)
+    monkeypatch.setattr(config, "MAX_COMPANY_SIZE", "large")  # allow up to large
+    _stub_rounds(monkeypatch, [
+        {"candidates": [
+            _cand("BigCo", "bigco.com", 9, industry="Energy utility", size="large"),
+            _cand("Mega", "mega.com", 9, industry="Energy major", size="enterprise"),
+        ]},
+    ])
+    winners = discovery.discover(client=None, conn=conn, on_profile="ON")
+    domains = [c.domain for _, c in winners]
+    assert "bigco.com" in domains       # large allowed under the raised ceiling
+    assert "mega.com" not in domains    # enterprise still excluded
 
 
 def test_company_ids_are_real(conn, monkeypatch):

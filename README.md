@@ -24,10 +24,14 @@ You send all emails yourself; the agent only finds companies and prepares drafts
    draft first.
 3. **Research + draft** — for each winner, reads its site + leadership, stores
    contacts (public emails + pattern-guessed exec addresses), and drafts a
-   tailored, CAN-SPAM-compliant initial email.
+   tailored initial email body. The draft has **no sign-off/signature** — your
+   own mail client appends your signature (name, contact, address) on send.
 4. **Follow-ups** — flags companies marked `sent` with no reply after 5 business
    days and drafts a follow-up.
-5. Prints a digest.
+5. Writes ready-to-send drafts to `outbox/<date>/` — `index.md` (each email with
+   its contact list, for copy-paste) plus one `.eml` per email (double-click to
+   open as a pre-filled draft in your mail client).
+6. Prints a digest.
 
 Every company ever seen (fits and non-fits) is stored, so none resurface.
 
@@ -43,7 +47,7 @@ provider can be swapped without touching the pipeline.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-cp .env.example .env      # then fill in OPENAI_API_KEY and SENDER_* fields
+cp .env.example .env      # then fill in OPENAI_API_KEY
 ```
 
 The agent reads config from `.env` (gitignored). Key fields:
@@ -52,10 +56,10 @@ The agent reads config from `.env` (gitignored). Key fields:
 |---|---|
 | `OPENAI_API_KEY` | Your OpenAI API key (platform.openai.com) |
 | `OPENAI_MODEL` | Model id (default `gpt-5.5`, OpenAI's recommended model for web search) |
-| `SENDER_NAME` / `SENDER_EMAIL` / `SENDER_PHYSICAL_ADDRESS` | Used in the email sign-off; the physical address is required for CAN-SPAM |
 | `FIT_SCORE_THRESHOLD`, `TARGET_COMPANY_COUNT`, `MAX_DISCOVERY_CALLS`, `FOLLOWUP_BUSINESS_DAYS` | Pipeline tunables |
 | `MAX_PER_SECTOR` | Max picks from one sector per day (diversifier; default 2) |
 | `AVOID_SECTORS` | Comma-separated sector keys to exclude entirely (e.g. `aerospace_defense`). Avoided-but-qualified companies are kept as reversible backlog. Valid keys are in `sectors.py`. |
+| `MAX_COMPANY_SIZE` | Largest company size to target: `startup`\|`small`\|`mid`\|`large`\|`enterprise` (default `mid`). Bigger companies (e.g. multinationals like GM) are excluded. |
 
 ## Daily use
 
@@ -85,9 +89,10 @@ Reply tracking is fully manual — the agent never reads your inbox.
 | `discovery.py` | Bounded web-search discovery loop + per-sector diversifier + backlog seeding |
 | `sectors.py` | Keyword sector classifier (powers the diversifier) |
 | `research.py` | Per-winner grounding + initial-email drafting |
-| `drafting.py` | Signature, CAN-SPAM guidance, follow-up drafting |
+| `drafting.py` | Follow-up drafting orchestration |
 | `contacts.py` | Email-pattern guessing |
 | `followups.py` | Business-day follow-up sweep |
+| `outbox.py` | Writes copy-paste `index.md` + `.eml` drafts after a run |
 | `schemas.py` | Pydantic validation models |
 | `prompts/` | All LLM prompt text, one module per type (`discovery`, `research`, `followup`, `on_profile`, `common`); each exposes `SYSTEM` + `build_user(...)` |
 

@@ -56,8 +56,14 @@ such a company at all, set is_service_provider=true (it will be filtered out).
 ON wants, e.g., the aerospace OEM that needs better CFD — NOT the firm that sells
 CFD software.
 
+SIZE: ON is a boutique consultancy. Target small-to-mid-sized companies, startups,
+scale-ups, and focused divisions — NOT household-name multinational giants (e.g.
+General Motors, Boeing, Pfizer, ExxonMobil), which have large in-house teams and
+aren't realistic clients. Estimate each company's size honestly.
+
 For each company:
 - Give the real name and primary website domain (e.g. acme.com).
+- Set company_size honestly (startup / small / mid / large / enterprise).
 - Set is_service_provider: true if the company itself sells modelling/UQ/ML/HPC
   services or software; false if it is a potential client with its own problems.
 - Score fit from 0-10. Reserve {config.FIT_SCORE_THRESHOLD}+ for end-user companies

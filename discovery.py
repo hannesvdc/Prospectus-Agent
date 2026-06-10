@@ -59,6 +59,14 @@ SUBMIT_CANDIDATES_TOOL = {
                             "type": "integer",
                             "description": "Fit for Open Numerics, 0 (none) to 10 (ideal)",
                         },
+                        "company_size": {
+                            "type": "string",
+                            "enum": ["startup", "small", "mid", "large", "enterprise"],
+                            "description": (
+                                "Approximate headcount: startup (<50), small (50-200), "
+                                "mid (200-1000), large (1000-10000), enterprise (10000+)."
+                            ),
+                        },
                         "is_service_provider": {
                             "type": "boolean",
                             "description": (
@@ -81,6 +89,7 @@ SUBMIT_CANDIDATES_TOOL = {
                         "why_fit",
                         "suggested_applications",
                         "fit_score",
+                        "company_size",
                         "is_service_provider",
                         "source_urls",
                     ],
@@ -179,11 +188,13 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
             seen.add(dom)
             deny.append({"name": cand.name, "domain": dom})
 
-            # A company that sells these services itself is a competitor, not a
-            # client — exclude it regardless of score (stored so it won't recur).
+            # Exclude competitors (sell these services themselves) and companies
+            # above the size ceiling — both regardless of score, stored as
+            # not_a_fit so they don't recur.
             qualified = (
                 cand.fit_score >= config.FIT_SCORE_THRESHOLD
                 and not cand.is_service_provider
+                and config.size_allowed(cand.company_size)
             )
             status = "new" if qualified else "not_a_fit"
             cid = db.upsert_company(

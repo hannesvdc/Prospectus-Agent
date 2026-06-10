@@ -43,10 +43,23 @@ def test_submit_tool_is_valid_openai_function(tool):
     _assert_strict(tool["parameters"], tool["name"])
 
 
-def test_candidate_schema_includes_provider_flag():
+def test_candidate_schema_includes_provider_and_size():
     props = discovery.SUBMIT_CANDIDATES_TOOL["parameters"]["properties"]
     item_props = props["candidates"]["items"]["properties"]
     assert "is_service_provider" in item_props
+    assert item_props["company_size"]["enum"] == [
+        "startup", "small", "mid", "large", "enterprise"
+    ]
+
+
+def test_size_allowed(monkeypatch):
+    monkeypatch.setattr(config, "MAX_COMPANY_SIZE", "mid")
+    assert config.size_allowed("startup")
+    assert config.size_allowed("mid")
+    assert not config.size_allowed("large")
+    assert not config.size_allowed("enterprise")
+    # Unknown values are treated leniently (as 'mid'), not silently excluded.
+    assert config.size_allowed("ginormous")
 
 
 def test_config_int_fallback():

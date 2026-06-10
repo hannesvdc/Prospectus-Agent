@@ -34,14 +34,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 ON_WEBSITE_URL = os.getenv("ON_WEBSITE_URL", "https://opennumerics.com").strip()
 ON_PROFILE_CACHE = "on_profile_cache.json"
 
-# --- Sender identity -------------------------------------------------------
-SENDER = {
-    "name": os.getenv("SENDER_NAME", "").strip(),
-    "title": os.getenv("SENDER_TITLE", "").strip(),
-    "company": os.getenv("SENDER_COMPANY", "Open Numerics").strip(),
-    "email": os.getenv("SENDER_EMAIL", "").strip(),
-    "physical_address": os.getenv("SENDER_PHYSICAL_ADDRESS", "").strip(),
-}
+# The company the agent is pitching (NOT sender identity — the user's own email
+# signature supplies their name/title/contact/address on send).
+COMPANY_NAME = os.getenv("COMPANY_NAME", "Open Numerics").strip()
 
 # --- Pipeline tunables -----------------------------------------------------
 # gpt-5.5 is OpenAI's recommended model for the hosted web search tool.
@@ -55,6 +50,10 @@ MAX_PER_SECTOR = _int("MAX_PER_SECTOR", 2)
 # "aerospace_defense". Avoided-but-qualified companies are kept as backlog, so
 # removing a sector here makes them eligible again.
 AVOID_SECTORS = _list("AVOID_SECTORS")
+# Company-size ceiling. Picks larger than MAX_COMPANY_SIZE are excluded (ON is a
+# boutique consultancy; household-name giants aren't realistic prospects).
+COMPANY_SIZE_ORDER = ["startup", "small", "mid", "large", "enterprise"]
+MAX_COMPANY_SIZE = os.getenv("MAX_COMPANY_SIZE", "mid").strip().lower()
 MAX_DISCOVERY_CALLS = _int("MAX_DISCOVERY_CALLS", 3)
 FOLLOWUP_BUSINESS_DAYS = _int("FOLLOWUP_BUSINESS_DAYS", 5)
 DB_PATH = os.getenv("DB_PATH", "prospects.db").strip()
@@ -68,6 +67,19 @@ ON_SERVICE_AREAS = [
     "GPU acceleration of scientific and engineering compute",
     "high-performance and parallel computing for modelling workloads",
 ]
+
+
+def size_rank(size: str) -> int:
+    """Index of a size bucket in COMPANY_SIZE_ORDER; unknown -> 'mid' (lenient)."""
+    try:
+        return COMPANY_SIZE_ORDER.index((size or "").strip().lower())
+    except ValueError:
+        return COMPANY_SIZE_ORDER.index("mid")
+
+
+def size_allowed(size: str) -> bool:
+    """True if `size` is at or below the configured MAX_COMPANY_SIZE ceiling."""
+    return size_rank(size) <= size_rank(MAX_COMPANY_SIZE)
 
 
 def require_api_key() -> str:

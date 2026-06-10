@@ -1,0 +1,90 @@
+"""Tests for the outbox generator (markdown digest + .eml drafts)."""
+from __future__ import annotations
+
+import email
+from datetime import date
+from email import policy
+
+import db
+import outbox
+
+
+def _parse_eml(path):
+    return email.message_from_bytes(path.read_bytes(), policy=policy.default)
+
+
+def _seed(conn, *, domain="acme.com", with_public=True, etype="initial"):
+    cid = db.upsert_company(
+        conn, name="Acme", domain=domain, hq_location="Denver, CO", industry="Automotive",
+        fit_score=9, why_fit="crash sim", suggested_applications=["x"], source_urls=[],
+        status="drafted",
+    )
+    if with_public:
+        db.add_contact(conn, cid, name="", role="generic inbox",
+                       email="info@acme.com", email_confidence="public")
+    db.add_contact(conn, cid, name="Jane Doe", role="CTO",
+                   email="jane.doe@acme.com", email_confidence="guessed")
+    db.add_email(conn, cid, type=etype, subject="Crash sim for your EVs",
+                 body="Hi there,\nWe can help.\n\nRegards\nHannes")
+    return cid
+
+
+def test_generate_writes_markdown_and_eml(conn, tmp_path):
+    _seed(conn)
+    today = date.today().isoformat()
+    result = outbox.generate(conn, out_root=str(tmp_path), today=today)
+    assert result is not None
+    out_dir, count = result
+    assert count == 1
+
+    index = (tmp_path / today / "index.md").read_text()
+    assert "Acme (acme.com)" in index
+    assert "Crash sim for your EVs" in index
+    assert "We can help." in index
+    assert "info@acme.com  (public" in index
+    assert "jane.doe@acme.com  (guessed — Jane Doe, CTO)" in index
+
+    eml_path = tmp_path / today / "initial-acme-com.eml"
+    assert eml_path.exists()
+    msg = _parse_eml(eml_path)
+    assert msg["To"] == "info@acme.com"          # public goes in To
+    assert msg["Subject"] == "Crash sim for your EVs"
+    assert msg["X-Unsent"] == "1"                 # opens as a draft
+    assert "We can help." in msg.get_content()
+
+
+def test_guessed_only_uses_best_guess_and_warns(conn, tmp_path):
+    _seed(conn, with_public=False)
+    today = date.today().isoformat()
+    outbox.generate(conn, out_root=str(tmp_path), today=today)
+
+    index = (tmp_path / today / "index.md").read_text()
+    assert "verify before sending" in index
+
+    msg = _parse_eml(tmp_path / today / "initial-acme-com.eml")
+    assert msg["To"] == "jane.doe@acme.com"       # falls back to the guess
+
+
+def test_followups_labelled(conn, tmp_path):
+    _seed(conn, etype="followup")
+    today = date.today().isoformat()
+    outbox.generate(conn, out_root=str(tmp_path), today=today)
+    index = (tmp_path / today / "index.md").read_text()
+    assert "(follow-up)" in index
+    assert (tmp_path / today / "followup-acme-com.eml").exists()
+
+
+def test_nothing_drafted_returns_none(conn, tmp_path):
+    # No emails at all.
+    assert outbox.generate(conn, out_root=str(tmp_path), today="2026-06-10") is None
+
+
+def test_only_todays_emails_included(conn, tmp_path):
+    cid = _seed(conn)
+    # An email from another day should be ignored.
+    conn.execute(
+        "UPDATE emails SET created_at='2000-01-01' WHERE company_id=?", (cid,)
+    )
+    conn.commit()
+    today = date.today().isoformat()
+    assert outbox.generate(conn, out_root=str(tmp_path), today=today) is None

@@ -220,3 +220,4 @@ __marimo__/
 # Prospectus-Agent
 prospects.db
 on_profile_cache.json
+outbox/
