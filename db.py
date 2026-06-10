@@ -96,9 +96,18 @@ def get_seen_domains(conn: sqlite3.Connection) -> set[str]:
     return {r["domain"] for r in rows}
 
 
-def deny_list(conn: sqlite3.Connection) -> list[dict]:
-    """Compact (name, domain) list to steer the model away from repeats."""
-    rows = conn.execute("SELECT name, domain FROM companies ORDER BY first_seen").fetchall()
+def deny_list(conn: sqlite3.Connection, limit: int | None = None) -> list[dict]:
+    """Compact (name, domain) list to steer the model away from repeats. With a
+    limit, returns the most-recently-seen `limit` companies (the DB filter still
+    catches any duplicate the hint misses, so this only trades hint coverage for
+    fewer prompt tokens)."""
+    if limit:
+        rows = conn.execute(
+            "SELECT name, domain FROM companies ORDER BY first_seen DESC, id DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT name, domain FROM companies ORDER BY first_seen").fetchall()
     return [{"name": r["name"], "domain": r["domain"]} for r in rows]
 
 

@@ -65,10 +65,6 @@ LABELS = {
     "other": "other",
 }
 
-# All valid bucket keys (for validating AVOID_SECTORS / PREFER_SECTORS configs).
-ALL = [bucket for bucket, _ in _BUCKETS] + ["other"]
-
-
 def classify(*texts: str) -> str:
     """Return a coarse sector bucket for the given text(s), or 'other'."""
     blob = " ".join(t.lower() for t in texts if t)

@@ -79,6 +79,8 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
         user_text=research_prompts.build_user(cand, on_profile),
         tools=[WEB_SEARCH_TOOL, SUBMIT_OUTREACH_TOOL],
         submit_tool_name="submit_company_outreach",
+        max_output_tokens=config.DRAFT_MAX_TOKENS,
+        effort=config.DRAFTING_EFFORT,
     )
 
     summary = {"name": cand.name, "domain": cand.domain, "contacts": 0, "drafted": False}
@@ -93,22 +95,23 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
         return summary
 
     n_contacts = 0
-    # Public generic inboxes.
-    for email in result.public_emails:
+    # One (or few) generic public inbox(es).
+    for email in result.public_emails[:config.MAX_PUBLIC_EMAILS]:
         email = email.strip()
         if email:
             db.add_contact(conn, company_id, name="", role="generic inbox",
                            email=email, email_confidence="public")
             n_contacts += 1
 
-    # Named people: public address if present, otherwise pattern guesses.
-    for person in result.people:
+    # Up to MAX_PEOPLE senior people: published address if found, else a capped
+    # number of pattern guesses each.
+    for person in result.people[:config.MAX_PEOPLE]:
         if person.public_email:
             db.add_contact(conn, company_id, name=person.name, role=person.title,
                            email=person.public_email.strip(), email_confidence="public")
             n_contacts += 1
         else:
-            for guess in contacts_mod.guess_emails(person.name, cand.domain):
+            for guess in contacts_mod.guess_emails(person.name, cand.domain)[:config.GUESSES_PER_PERSON]:
                 db.add_contact(conn, company_id, name=person.name, role=person.title,
                                email=guess, email_confidence="guessed")
                 n_contacts += 1

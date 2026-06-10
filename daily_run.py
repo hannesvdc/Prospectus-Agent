@@ -21,6 +21,7 @@ import config
 import db
 import discovery
 import followups
+import llm
 import on_profile
 import outbox
 import research
@@ -75,6 +76,7 @@ def main() -> int:
     client = config.get_client()
     conn = db.connect( config.DB_PATH )
     db.init_db( conn )
+    llm.reset_usage()
 
     print("Refreshing Open Numerics profile...")
     profile = on_profile.refresh_profile( client )
@@ -100,6 +102,14 @@ def main() -> int:
         print(f"\n✉  Wrote {n} ready-to-send draft(s) to {out_dir}/")
         print(f"   • {out_dir}/index.md  — recipients + subject + body, ready to copy-paste")
         print("   • one .eml per email   — double-click to open as a draft in your mail client")
+
+    u = llm.get_usage()
+    if u["calls"]:
+        print(
+            f"\nToken usage: {u['calls']} API call(s) — "
+            f"input {u['input']:,} (cached {u['cached']:,}), "
+            f"output {u['output']:,} (reasoning {u['reasoning']:,})."
+        )
 
     conn.close()
     return 0

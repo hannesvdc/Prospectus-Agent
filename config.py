@@ -39,8 +39,22 @@ ON_PROFILE_CACHE = "on_profile_cache.json"
 COMPANY_NAME = os.getenv("COMPANY_NAME", "Open Numerics").strip()
 
 # --- Pipeline tunables -----------------------------------------------------
-# gpt-5.5 is OpenAI's recommended model for the hosted web search tool.
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5.5").strip()
+# gpt-5.4-mini is ~6.6x cheaper than gpt-5.5 and plenty for scoring + short email
+# drafting. Bump to gpt-5.4 or gpt-5.5 if you find draft quality lacking.
+MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini").strip()
+
+# --- Token / cost controls -------------------------------------------------
+# gpt-5.x reasoning effort: none|minimal|low|medium|high|xhigh. Lower = fewer
+# (hidden) reasoning tokens. Discovery/profile are mechanical -> low. Bump
+# DRAFTING_EFFORT to medium/high if email quality dips.
+DISCOVERY_MODEL = os.getenv("DISCOVERY_MODEL", MODEL).strip()  # e.g. a cheaper gpt-5-mini
+DISCOVERY_EFFORT = os.getenv("DISCOVERY_EFFORT", "low").strip()
+DRAFTING_EFFORT = os.getenv("DRAFTING_EFFORT", "low").strip()
+# How much web-search content the tool pulls into context: low|medium|high.
+SEARCH_CONTEXT_SIZE = os.getenv("SEARCH_CONTEXT_SIZE", "low").strip()
+DISCOVERY_MAX_TOKENS = _int("DISCOVERY_MAX_TOKENS", 8000)
+DRAFT_MAX_TOKENS = _int("DRAFT_MAX_TOKENS", 4000)
+PROFILE_MAX_TOKENS = _int("PROFILE_MAX_TOKENS", 2000)
 TARGET_REGION = os.getenv("TARGET_REGION", "North America").strip()
 FIT_SCORE_THRESHOLD = _int("FIT_SCORE_THRESHOLD", 7)
 TARGET_COMPANY_COUNT = _int("TARGET_COMPANY_COUNT", 5)
@@ -54,7 +68,18 @@ AVOID_SECTORS = _list("AVOID_SECTORS")
 # boutique consultancy; household-name giants aren't realistic prospects).
 COMPANY_SIZE_ORDER = ["startup", "small", "mid", "large", "enterprise"]
 MAX_COMPANY_SIZE = os.getenv("MAX_COMPANY_SIZE", "mid").strip().lower()
-MAX_DISCOVERY_CALLS = _int("MAX_DISCOVERY_CALLS", 3)
+MAX_DISCOVERY_CALLS = _int("MAX_DISCOVERY_CALLS", 2)
+
+# Cap how many already-seen companies are sent as a "don't repeat" hint. The DB
+# filter still guarantees no duplicates; this keeps input from growing unbounded.
+DENY_LIST_LIMIT = _int("DENY_LIST_LIMIT", 150)
+# Re-fetch the ON profile from the web at most every N days (cached otherwise).
+PROFILE_REFRESH_DAYS = _int("PROFILE_REFRESH_DAYS", 7)
+
+# Contact list size per company: one generic inbox + a few senior people.
+MAX_PUBLIC_EMAILS = _int("MAX_PUBLIC_EMAILS", 1)      # generic inboxes (info@/contact@)
+MAX_PEOPLE = _int("MAX_PEOPLE", 3)                    # named senior people
+GUESSES_PER_PERSON = _int("GUESSES_PER_PERSON", 1)    # guessed addresses per person
 FOLLOWUP_BUSINESS_DAYS = _int("FOLLOWUP_BUSINESS_DAYS", 5)
 DB_PATH = os.getenv("DB_PATH", "prospects.db").strip()
 

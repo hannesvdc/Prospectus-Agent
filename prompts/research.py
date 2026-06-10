@@ -23,16 +23,17 @@ Why we think they fit: {cand.why_fit}
 Preliminary applications:
 {apps}
 
-STEP 1 — Research: use web search to open and read {cand.domain} (home, about,
-team/leadership, and any products/R&D pages) and to find the company's senior
-people. Confirm what they actually do and who leads engineering / R&D / the company.
+STEP 1 — Research (keep it lean): open and read at most the homepage plus ONE or
+TWO key pages of {cand.domain} (an about/team or products page), and do at most a
+couple of focused searches for the company's senior people. That's enough — don't
+crawl the whole site. Confirm what they do and who leads engineering / R&D.
 
 STEP 2 — Return, via `submit_company_outreach`:
 - refined_applications: 2-4 specific, honest ways ON could help, tied to their real work.
-- public_emails: only generic inboxes actually published on their site.
-- people: senior/relevant individuals with name + title; include public_email ONLY
-  if it is genuinely published, else null. Do NOT guess addresses — we generate
-  guesses separately.
+- public_emails: at most ONE generic inbox published on their site (e.g. info@/contact@).
+- people: the 3 most senior / relevant decision-makers (e.g. CEO, CTO, VP/Head of
+  Engineering or R&D) — no more than 3, with name + title. Include public_email
+  ONLY if genuinely published, else null. Do NOT guess addresses — we do that separately.
 - A tailored initial email:
     * email_subject: accurate, specific, non-spammy.
     * email_body: ~120-180 words. Warm and concrete. Open with why you're reaching

@@ -44,10 +44,11 @@ def build_user(on_profile: str, deny: list[dict], angle: str, avoid_labels=None)
 ON's core service areas:
 {services}
 
-TASK: Use web search to find up to 10 {config.TARGET_REGION}-based companies that
-would BENEFIT FROM ON's services — i.e. companies with their own engineering,
-R&D, or scientific problems that simulation / UQ / scientific ML / GPU-HPC could
-help solve. Focus this round on: {angle}.
+TASK: Use web search (a few focused searches — don't over-search) to find up to 6
+{config.TARGET_REGION}-based companies that would BENEFIT FROM ON's services —
+i.e. companies with their own engineering, R&D, or scientific problems that
+simulation / UQ / scientific ML / GPU-HPC could help solve. Focus this round
+on: {angle}. Keep `why_fit` to one sentence and `suggested_applications` short.
 {avoid_block}
 EXCLUDE companies whose own business is providing these capabilities — simulation
 / CFD / FEA / UQ / scientific-ML / HPC consultancies, software vendors, and

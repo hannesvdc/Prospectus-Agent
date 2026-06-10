@@ -59,6 +59,13 @@ def test_seen_domains_and_deny_list(conn):
     assert {d["name"] for d in deny} == {"Acme", "Beta"}
 
 
+def test_deny_list_limit(conn):
+    for i in range(5):
+        _insert(conn, domain=f"c{i}.com", name=f"C{i}")
+    assert len(db.deny_list(conn, limit=2)) == 2   # capped
+    assert len(db.deny_list(conn)) == 5            # full when no limit
+
+
 def test_set_status_sent_sets_contact_date(conn):
     _insert(conn)
     assert db.set_status(conn, "acme.com", "sent", set_contact_date=True)
@@ -113,10 +120,10 @@ def test_emails_and_helpers(conn):
 
 
 def test_companies_awaiting_followup(conn):
-    c1 = _insert(conn, domain="sent.com")
+    _insert(conn, domain="sent.com")
     db.set_status(conn, "sent.com", "sent", set_contact_date=True)
     _insert(conn, domain="new.com")  # status new, no contact date
-    c3 = _insert(conn, domain="replied.com")
+    _insert(conn, domain="replied.com")
     db.set_status(conn, "replied.com", "replied")
     awaiting = db.companies_awaiting_followup(conn)
     assert {r["domain"] for r in awaiting} == {"sent.com"}

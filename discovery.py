@@ -120,7 +120,7 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
     """Run the discovery loop. Returns a list of (company_id, Candidate) for the
     qualified winners (up to TARGET_COMPANY_COUNT), diversified across sectors."""
     seen = db.get_seen_domains(conn)
-    deny = db.deny_list(conn)
+    deny = db.deny_list(conn, limit=config.DENY_LIST_LIMIT)
     winners: list[tuple[int, Candidate]] = []
     sector_counts: dict[str, int] = {}
 
@@ -164,11 +164,13 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
 
         raw = run_with_submit(
             client,
-            model=config.MODEL,
+            model=config.DISCOVERY_MODEL,
             system=discovery_prompts.SYSTEM,
             user_text=discovery_prompts.build_user(on_profile, deny, angle, avoid_labels),
             tools=[WEB_SEARCH_TOOL, SUBMIT_CANDIDATES_TOOL],
             submit_tool_name="submit_candidates",
+            max_output_tokens=config.DISCOVERY_MAX_TOKENS,
+            effort=config.DISCOVERY_EFFORT,
         )
         if not raw:
             print("    (no candidates returned this round)")

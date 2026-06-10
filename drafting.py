@@ -43,7 +43,8 @@ def draft_followup(client, conn, company_row, on_profile: str):
         user_text=followup_prompts.build_user(company_row, prior_block, on_profile),
         tools=[SUBMIT_FOLLOWUP_TOOL],
         submit_tool_name="submit_followup",
-        max_output_tokens=4000,
+        max_output_tokens=config.DRAFT_MAX_TOKENS,
+        effort=config.DRAFTING_EFFORT,
     )
     if not raw:
         return None

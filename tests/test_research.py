@@ -6,9 +6,16 @@ nothing.
 """
 from __future__ import annotations
 
+import config
 import db
 import research
 from schemas import Candidate
+
+
+def _caps(monkeypatch, *, public=1, people=3, guesses=1):
+    monkeypatch.setattr(config, "MAX_PUBLIC_EMAILS", public)
+    monkeypatch.setattr(config, "MAX_PEOPLE", people)
+    monkeypatch.setattr(config, "GUESSES_PER_PERSON", guesses)
 
 
 def _winner(conn, domain="acme.com"):
@@ -23,6 +30,7 @@ def _winner(conn, domain="acme.com"):
 
 
 def test_research_stores_contacts_and_draft(conn, monkeypatch):
+    _caps(monkeypatch)  # 1 public inbox, 3 people, 1 guess each
     cid, cand = _winner(conn)
 
     payload = {
@@ -46,16 +54,40 @@ def test_research_stores_contacts_and_draft(conn, monkeypatch):
     for c in contacts:
         by_conf.setdefault(c["email_confidence"], []).append(c["email"])
 
-    # info@ (public) + bob@ (public) = 2 public; Jane has no public email -> guesses.
+    # 1 generic inbox + Bob's published address (public); Jane gets ONE guess.
     assert set(by_conf["public"]) == {"info@acme.com", "bob@acme.com"}
-    assert "jane.doe@acme.com" in by_conf["guessed"]
-    assert len(by_conf["guessed"]) == 4  # the four name patterns for Jane
-    assert summary["contacts"] == 6
+    assert by_conf["guessed"] == ["jane.doe@acme.com"]  # single best guess
+    assert summary["contacts"] == 3
 
     # Email drafted and status advanced.
     em = db.latest_email(conn, cid, "initial")
     assert em["subject"] == "CFD for your turbines"
     assert db.get_company_by_domain(conn, "acme.com")["status"] == "drafted"
+
+
+def test_research_caps_contacts(conn, monkeypatch):
+    _caps(monkeypatch, public=1, people=3, guesses=1)
+    cid, cand = _winner(conn)
+    payload = {
+        "refined_applications": ["x"],
+        "public_emails": ["info@acme.com", "sales@acme.com", "hr@acme.com"],  # 3 -> 1
+        "people": [  # 5 -> 3
+            {"name": n, "title": "VP", "public_email": None}
+            for n in ["Alice Smith", "Bob Jones", "Carol White", "Dan Brown", "Eve Black"]
+        ],
+        "email_subject": "S",
+        "email_body": "B",
+        "draft_notes": "",
+    }
+    monkeypatch.setattr(research, "run_with_submit", lambda *a, **k: payload)
+    research.research_and_draft(None, conn, cid, cand, on_profile="ON")
+
+    contacts = db.get_contacts(conn, cid)
+    public = [c for c in contacts if c["email_confidence"] == "public"]
+    guessed = [c for c in contacts if c["email_confidence"] == "guessed"]
+    assert len(public) == 1                  # only one generic inbox
+    assert len(guessed) == 3                 # 3 people, one guess each
+    assert len(contacts) == 4                # 1 + 3 total
 
 
 def test_research_handles_no_result(conn, monkeypatch):
