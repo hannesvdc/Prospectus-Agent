@@ -16,11 +16,21 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z]", "", text.lower())
 
 
+# Leading titles and trailing credentials to drop so we pick the real surname,
+# e.g. "Jeremy Schrooten, PhD" -> jeremy.schrooten (not jeremy.phd).
+_HONORIFICS = {"dr", "mr", "ms", "mrs", "mx", "prof", "sir", "madam"}
+_SUFFIXES = {"phd", "md", "mba", "msc", "dvm", "dds", "jd", "cpa", "esq",
+             "jr", "sr", "ii", "iii", "iv"}
+
+
 def _name_parts(full_name: str) -> tuple[str, str]:
-    tokens = [t for t in re.split(r"\s+", full_name.strip()) if t]
-    # Drop common honorifics.
-    honorifics = {"dr", "dr.", "mr", "mr.", "ms", "ms.", "mrs", "mrs.", "prof", "prof."}
-    tokens = [t for t in tokens if t.lower().strip(".") not in {h.strip('.') for h in honorifics}]
+    tokens = []
+    for raw in re.split(r"\s+", full_name.strip()):
+        t = raw.strip(".,")  # drop surrounding punctuation (e.g. "Schrooten,")
+        low = t.lower()
+        if not t or low in _HONORIFICS or low in _SUFFIXES:
+            continue
+        tokens.append(t)
     if not tokens:
         return "", ""
     if len(tokens) == 1:

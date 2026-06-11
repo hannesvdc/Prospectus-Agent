@@ -26,6 +26,18 @@ def test_accents_and_apostrophes_normalized():
     assert out[0] == "renee.obrien@foo.io"
 
 
+def test_strips_trailing_credentials():
+    # "Jeremy Schrooten, PhD" must guess from the surname, not the credential.
+    assert contacts.guess_emails("Jeremy Schrooten, PhD", "acme.com")[0] == "jeremy.schrooten@acme.com"
+    assert contacts.guess_emails("Dr. Vikram Rao", "acme.com")[0] == "vikram.rao@acme.com"
+    assert contacts.guess_emails("Sarah Lee Jr.", "acme.com")[0] == "sarah.lee@acme.com"
+
+
+def test_real_surname_not_mistaken_for_credential():
+    # A short real surname (e.g. "Ma") must survive.
+    assert contacts.guess_emails("Jack Ma", "acme.com")[0] == "jack.ma@acme.com"
+
+
 def test_single_name_only_first_pattern():
     out = contacts.guess_emails("Cher", "bar.com")
     assert out == ["cher@bar.com"]

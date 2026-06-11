@@ -18,7 +18,7 @@ def build_user(cand, on_profile: str) -> str:
     suggested_applications)."""
     apps = "\n".join(f"- {a}" for a in cand.suggested_applications) or "(none yet)"
     credibility_note = (
-        f' Naturally work in one brief credibility line — for example: "{profile.CREDIBILITY}".'
+        f' Also work in one brief credibility line, e.g. "{profile.CREDIBILITY}".'
         if profile.CREDIBILITY else ""
     )
     return f"""About {profile.NAME}:
@@ -44,12 +44,19 @@ STEP 2 — Return, via `submit_company_outreach`:
   ONLY if genuinely published, else null. Do NOT guess addresses — we do that separately.
 - A tailored initial email:
     * email_subject: accurate, specific, non-spammy.
-    * email_body: ~120-180 words. Warm and concrete. Open with why you're reaching
-      out to THEM specifically (reference their real work), name 1-2 concrete things
-      {profile.NAME} could do, and end with a low-pressure ask for a short call. Use a
-      neutral greeting ("Hi there,") since the sender chooses the recipient.{credibility_note}
-      You may end with a short closing like "Best,". Do NOT add a signature, sender name,
-      title, company, contact details, or postal address — the sender's email client
-      appends their own signature on send.
+    * email_body: ~120-170 words. This is a cold INTRODUCTION and offer of services.
+      Position {profile.NAME} as outside specialists who could help — NOT as an
+      industry peer. Do NOT imply you already work in or know their industry, and
+      never use phrases like "compare notes." Cover, in this order:
+        1. One specific line on why you're reaching out, grounded in their real work.
+        2. One sentence introducing what {profile.NAME} does (the offer of services).
+        3. 2-3 concrete example applications for THIS company — this is the most
+           important part; tie each to their actual work.
+        4. A simple, low-pressure ask for a short intro call to walk through how
+           {profile.NAME} could help (do NOT frame it as comparing notes or trading
+           expertise — you're offering yours).
+      Use a neutral greeting ("Hi there,").{credibility_note} You may close with
+      "Best,". Do NOT add a signature, sender name, title, company, or contact
+      details — the sender's email client appends their own on send.
 - draft_notes: anything the sender should know before sending.
 """

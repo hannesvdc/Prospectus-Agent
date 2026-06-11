@@ -28,9 +28,9 @@ swap in your own.)
 - It keeps a small local database of who you've contacted and **nudges you to follow
   up** when a thread goes quiet (that's where most replies come from, and it's the
   bit I always forgot).
-- It **never sends anything.** You get copy-paste drafts (and `.eml` files you can
-  double-click) and send from your own inbox, in your own voice. I did that on
-  purpose — I don't trust any robot, this one included, to email strangers for me.
+- It **never sends anything.** You get copy-paste-ready drafts and send from your own
+  inbox, in your own voice. I did that on purpose — I don't trust any robot, this one
+  included, to email strangers for me.
 - It runs on a cheap model for **pennies a day**, not a monthly sales-SaaS seat.
 
 The honest pitch: it turns *"spend a morning hunting for leads and writing cold
@@ -75,9 +75,8 @@ so a fresh clone still runs.
    The draft has **no sign-off/signature** — your mail client adds yours on send.
 4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
    and drafts a gentle nudge.
-5. Writes ready-to-send drafts to `outbox/<date>/` — `index.md` (each email with its
-   contacts, for copy-paste) plus one `.eml` per email (double-click to open as a
-   pre-filled draft).
+5. Writes `outbox/<date>/index.md` — each email with its contact list, ready to
+   copy-paste into your mail client.
 6. Prints a digest and a token-usage line so you can see what the run cost.
 
 Every company it ever sees (fits and non-fits) is stored, so none resurface.
@@ -157,7 +156,7 @@ business — everything company-specific lives in `profile.yaml` / `prompts/`.
 | `drafting.py` | Follow-up drafting |
 | `contacts.py` | Email-pattern guessing |
 | `followups.py` | Business-day follow-up sweep |
-| `outbox.py` | Writes the copy-paste `index.md` + `.eml` drafts |
+| `outbox.py` | Writes the copy-paste `index.md` digest of drafts |
 | `schemas.py` | Pydantic validation models |
 
 ## Tests

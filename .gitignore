@@ -221,6 +221,9 @@ __marimo__/
 # Prospectus-Agent
 prospects.db
 prospects.backup-*.db
+*.db
 company_brief_cache.json
 outbox/
 profile.yaml
+profile.*.yaml
+!profile.example.yaml
