@@ -10,8 +10,9 @@ company:
   # A brief trust/credibility line woven into every outreach email (optional).
   # Keep it about EXPERIENCE / track record — don't just re-list the offerings above.
   credibility: >
-    Our team brings many years of hands-on experience to this kind of technical
-    modelling work.
+    Our team combines deep ties to academic research groups with years of
+    hands-on experience delivering this kind of technical modelling work for
+    companies in industry.
   # Fallback description, used only if the website can't be fetched.
   description: >
     Open Numerics provides specialist scientific-computing services: numerical

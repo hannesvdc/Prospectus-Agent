@@ -18,8 +18,10 @@ def build_user(cand, on_profile: str) -> str:
     suggested_applications)."""
     apps = "\n".join(f"- {a}" for a in cand.suggested_applications) or "(none yet)"
     credibility_note = (
-        f' You may add one brief note of experience (without re-listing the '
-        f'capabilities you mentioned), e.g. "{profile.CREDIBILITY}".'
+        f' Include one strong credibility sentence grounded in track record and '
+        f'experience — not a re-list of capabilities. Lean on the team\'s deep ties '
+        f'to academic research and its hands-on experience delivering for companies '
+        f'in industry; dress it up naturally, e.g. "{profile.CREDIBILITY}".'
         if profile.CREDIBILITY else ""
     )
     return f"""About {profile.NAME}:
@@ -45,17 +47,22 @@ STEP 2 — Return, via `submit_company_outreach`:
   ONLY if genuinely published, else null. Do NOT guess addresses — we do that separately.
 - A tailored initial email:
     * email_subject: accurate, specific, non-spammy.
-    * email_body: ~110-160 words. A cold INTRODUCTION and offer of services from
-      outside specialists — NOT an industry peer, and never "compare notes." In order:
+    * email_body: ~130-200 words, never more than 250. A cold INTRODUCTION and offer
+      of services from outside specialists — NOT an industry peer, and never "compare
+      notes." Throughout, keep the focus on WHAT'S IN IT FOR THEM — frame everything
+      around the outcomes and value they would get, not a feature tour of {profile.NAME}.
+      In order:
         1. Open with a plain one-sentence introduction of {profile.NAME} and what it
            helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
            [audience] with [a few of its capabilities]." Draw the capabilities from what
            {profile.NAME} offers. Do NOT open by recapping the prospect's own work, and
            do NOT diagnose their needs (no "your work suggests you need…").
         2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps
-           with that are relevant to their space — illustrative, not prescriptive; one
-           or two light, plausible connections to their domain. Do NOT prescribe fixes
-           for their specific product or claim to know their internals.
+           with that are relevant to their space, expressed as the benefit to them
+           (e.g. faster turnaround, more confidence in results, less compute cost) —
+           illustrative, not prescriptive; one or two light, plausible connections to
+           their domain. Do NOT prescribe fixes for their specific product or claim to
+           know their internals.
         3. A simple, low-pressure ask for a short intro call to see whether
            {profile.NAME} could be useful to them.
       Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
