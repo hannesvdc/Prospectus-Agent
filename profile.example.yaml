@@ -8,9 +8,10 @@ company:
   # Short noun phrase describing what kind of company you are (used in prompts).
   positioning: a boutique scientific-computing consultancy
   # A brief trust/credibility line woven into every outreach email (optional).
+  # Keep it about EXPERIENCE / track record — don't just re-list the offerings above.
   credibility: >
-    Our team has many years of hands-on experience in numerical simulation,
-    uncertainty quantification, scientific machine learning, and GPU/HPC.
+    Our team brings many years of hands-on experience to this kind of technical
+    modelling work.
   # Fallback description, used only if the website can't be fetched.
   description: >
     Open Numerics provides specialist scientific-computing services: numerical

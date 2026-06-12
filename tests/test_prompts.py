@@ -73,7 +73,7 @@ def test_research_build_user_includes_credibility(monkeypatch):
                      suggested_applications=["y"])
     out = rprompt.build_user(cand, "BRIEF")
     assert "20 years building widgets" in out
-    assert "credibility" in out.lower()
+    assert "note of experience" in out
 
 
 def test_research_build_user_omits_credibility_when_unset(monkeypatch):
@@ -82,7 +82,7 @@ def test_research_build_user_omits_credibility_when_unset(monkeypatch):
     cand = Candidate(name="Acme", domain="acme.com", why_fit="x", fit_score=9,
                      suggested_applications=["y"])
     out = rprompt.build_user(cand, "BRIEF")
-    assert "credibility line" not in out.lower()
+    assert "note of experience" not in out
 
 
 def test_followup_build_user_interpolates_and_omits_signature():

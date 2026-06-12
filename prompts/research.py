@@ -18,7 +18,8 @@ def build_user(cand, on_profile: str) -> str:
     suggested_applications)."""
     apps = "\n".join(f"- {a}" for a in cand.suggested_applications) or "(none yet)"
     credibility_note = (
-        f' Also work in one brief credibility line, e.g. "{profile.CREDIBILITY}".'
+        f' You may add one brief note of experience (without re-listing the '
+        f'capabilities you mentioned), e.g. "{profile.CREDIBILITY}".'
         if profile.CREDIBILITY else ""
     )
     return f"""About {profile.NAME}:
@@ -44,28 +45,21 @@ STEP 2 — Return, via `submit_company_outreach`:
   ONLY if genuinely published, else null. Do NOT guess addresses — we do that separately.
 - A tailored initial email:
     * email_subject: accurate, specific, non-spammy.
-    * email_body: ~120-170 words. This is a cold INTRODUCTION and offer of services.
-      Position {profile.NAME} as outside specialists who could help — NOT as an
-      industry peer. Do NOT imply you already work in or know their industry, and
-      never use phrases like "compare notes." Cover, in this order:
-        1. A sharp opening hook. Do NOT recap their own work back to them, and do
-           NOT start with "I'm reaching out because…". Either (a) name a concrete
-           challenge or opportunity their work implies that {profile.NAME} is suited
-           to, or (b) lead briefly with who {profile.NAME} is and why it's relevant.
-           Reference their work to show genuine relevance — never just to describe
-           their business to them.
-        2. One sentence introducing what {profile.NAME} does (the offer of services).
-        3. Convey, at a HIGH LEVEL, the kinds of problems {profile.NAME} solves that
-           are relevant to their space — illustrative, not prescriptive. Lead with
-           {profile.NAME}'s capability areas and make one or two light, plausible
-           connections to their domain. Do NOT prescribe specific fixes for their
-           exact product or claim to know their internals — over-specific claims read
-           as presumptuous (you don't know how they work). Keep relevance suggestive.
-        4. A simple, low-pressure ask for a short intro call to walk through how
-           {profile.NAME} could help (do NOT frame it as comparing notes or trading
-           expertise — you're offering yours).
-      Use a neutral greeting ("Hi there,").{credibility_note} You may close with
-      "Best,". Do NOT add a signature, sender name, title, company, or contact
-      details — the sender's email client appends their own on send.
+    * email_body: ~110-160 words. A cold INTRODUCTION and offer of services from
+      outside specialists — NOT an industry peer, and never "compare notes." In order:
+        1. Open with a plain one-sentence introduction of {profile.NAME} and what it
+           helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
+           [audience] with [a few of its capabilities]." Draw the capabilities from what
+           {profile.NAME} offers. Do NOT open by recapping the prospect's own work, and
+           do NOT diagnose their needs (no "your work suggests you need…").
+        2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps
+           with that are relevant to their space — illustrative, not prescriptive; one
+           or two light, plausible connections to their domain. Do NOT prescribe fixes
+           for their specific product or claim to know their internals.
+        3. A simple, low-pressure ask for a short intro call to see whether
+           {profile.NAME} could be useful to them.
+      Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
+      Do NOT add a signature, sender name, title, company, or contact details — the
+      sender's email client appends their own on send.
 - draft_notes: anything the sender should know before sending.
 """
