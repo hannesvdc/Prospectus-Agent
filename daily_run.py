@@ -78,6 +78,7 @@ def main() -> int:
     conn = db.connect( config.DB_PATH )
     db.init_db( conn )
     llm.reset_usage()
+    emails_before = db.max_email_id( conn )  # so the outbox emits only THIS run's drafts
 
     print(f"Refreshing {agent_profile.NAME} profile...")
     profile = on_profile.refresh_profile( client )
@@ -97,7 +98,7 @@ def main() -> int:
 
     _print_digest( winner_summaries, followup_summaries )
 
-    written = outbox.generate(conn)
+    written = outbox.generate(conn, since_email_id=emails_before)
     if written:
         out_dir, n = written
         print(f"\n✉  Wrote {n} draft(s) to {out_dir}/index.md — recipients + subject + body, ready to copy-paste.")

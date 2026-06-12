@@ -263,6 +263,11 @@ def has_email_since(
     return row is not None
 
 
+def max_email_id(conn: sqlite3.Connection) -> int:
+    """Highest email id so far (0 if none) — used to detect a run's new drafts."""
+    return conn.execute("SELECT COALESCE(MAX(id), 0) FROM emails").fetchone()[0]
+
+
 def emails_on(conn: sqlite3.Connection, date_iso: str) -> list[sqlite3.Row]:
     """All emails drafted on a given date (initial first, then follow-ups)."""
     return conn.execute(

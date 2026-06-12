@@ -76,7 +76,8 @@ so a fresh clone still runs.
 4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
    and drafts a gentle nudge.
 5. Writes `outbox/<date>/index.md` — each email with its contact list, ready to
-   copy-paste into your mail client.
+   copy-paste. Running again the same day **appends** the new drafts rather than
+   overwriting, so earlier drafts (and any notes you added) are kept.
 6. Prints a digest and a token-usage line so you can see what the run cost.
 
 Every company it ever sees (fits and non-fits) is stored, so none resurface.

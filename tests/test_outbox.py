@@ -59,6 +59,25 @@ def test_followups_labelled(conn, tmp_path):
     assert "(follow-up)" in index
 
 
+def test_second_run_same_day_appends(conn, tmp_path):
+    today = date.today().isoformat()
+
+    # Run 1: company A.
+    before1 = db.max_email_id(conn)
+    _seed(conn, domain="a.com")
+    outbox.generate(conn, out_root=str(tmp_path), today=today, since_email_id=before1)
+
+    # Run 2: company B (only B is new this run).
+    before2 = db.max_email_id(conn)
+    _seed(conn, domain="b.com")
+    result = outbox.generate(conn, out_root=str(tmp_path), today=today, since_email_id=before2)
+    assert result == (str(tmp_path / today), 1)  # only B written this run
+
+    index = (tmp_path / today / "index.md").read_text()
+    assert "a.com" in index and "b.com" in index          # augmented, not replaced
+    assert index.count("# Outreach drafts") == 1           # header not duplicated
+
+
 def test_nothing_drafted_returns_none(conn, tmp_path):
     assert outbox.generate(conn, out_root=str(tmp_path), today="2026-06-10") is None
 

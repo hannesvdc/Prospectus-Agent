@@ -48,10 +48,19 @@ STEP 2 — Return, via `submit_company_outreach`:
       Position {profile.NAME} as outside specialists who could help — NOT as an
       industry peer. Do NOT imply you already work in or know their industry, and
       never use phrases like "compare notes." Cover, in this order:
-        1. One specific line on why you're reaching out, grounded in their real work.
+        1. A sharp opening hook. Do NOT recap their own work back to them, and do
+           NOT start with "I'm reaching out because…". Either (a) name a concrete
+           challenge or opportunity their work implies that {profile.NAME} is suited
+           to, or (b) lead briefly with who {profile.NAME} is and why it's relevant.
+           Reference their work to show genuine relevance — never just to describe
+           their business to them.
         2. One sentence introducing what {profile.NAME} does (the offer of services).
-        3. 2-3 concrete example applications for THIS company — this is the most
-           important part; tie each to their actual work.
+        3. Convey, at a HIGH LEVEL, the kinds of problems {profile.NAME} solves that
+           are relevant to their space — illustrative, not prescriptive. Lead with
+           {profile.NAME}'s capability areas and make one or two light, plausible
+           connections to their domain. Do NOT prescribe specific fixes for their
+           exact product or claim to know their internals — over-specific claims read
+           as presumptuous (you don't know how they work). Keep relevance suggestive.
         4. A simple, low-pressure ask for a short intro call to walk through how
            {profile.NAME} could help (do NOT frame it as comparing notes or trading
            expertise — you're offering yours).
