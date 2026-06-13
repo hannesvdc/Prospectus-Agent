@@ -13,6 +13,18 @@ company:
     Our team combines deep ties to academic research groups with years of
     hands-on experience delivering this kind of technical modelling work for
     companies in industry.
+  # Optional gold-standard opener exemplar(s) for outreach emails. The drafter
+  # ADAPTS these (never copies verbatim) to anchor the tone and structure of the
+  # opening line. Add one or several — more entries give the voice more variety.
+  # Omit the field entirely if you'd rather let the model write openers unguided.
+  example_openers:
+    - >
+      I'm reaching out to introduce Open Numerics. We help R&D and engineering
+      teams identify where modeling, simulation, acceleration, or scientific ML
+      can create real leverage in their products and workflows. Our work combines
+      technical advisory with implementation: we help decide what is worth
+      building, then turn it into working software, deployable systems, and
+      practical decision-support tools.
   # Fallback description, used only if the website can't be fetched.
   description: >
     Open Numerics provides specialist scientific-computing services: numerical

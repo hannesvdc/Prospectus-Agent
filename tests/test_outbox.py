@@ -42,6 +42,30 @@ def test_generate_writes_index(conn, tmp_path):
     assert not list((tmp_path / today).glob("*.eml"))
 
 
+def test_generate_writes_html_with_hyperlink(conn, tmp_path):
+    import agent_profile
+    cid = db.upsert_company(
+        conn, name="Acme", domain="acme.com", hq_location="Denver, CO",
+        industry="Automotive", fit_score=9, why_fit="crash sim",
+        suggested_applications=["x"], source_urls=[], status="drafted",
+    )
+    db.add_contact(conn, cid, name="", role="generic inbox",
+                   email="info@acme.com", email_confidence="public")
+    # Two mentions of the seller name in the body; both should be linked.
+    db.add_email(conn, cid, type="initial", subject="Sim for your EVs",
+                 body=f"Hi there,\nI'm reaching out to introduce {agent_profile.NAME}.\n"
+                      f"{agent_profile.NAME} helps R&D teams.\n\nBest")
+    today = date.today().isoformat()
+    outbox.generate(conn, out_root=str(tmp_path), today=today)
+
+    html = (tmp_path / today / "index.html").read_text()
+    # EVERY body mention of the seller's name is hyperlinked for Gmail paste.
+    anchor = f'<a href="{agent_profile.WEBSITE}">{agent_profile.NAME}</a>'
+    assert html.count(anchor) == 2
+    assert "Sim for your EVs" in html
+    assert "info@acme.com" in html
+
+
 def test_guessed_only_warns(conn, tmp_path):
     _seed(conn, with_public=False)
     today = date.today().isoformat()

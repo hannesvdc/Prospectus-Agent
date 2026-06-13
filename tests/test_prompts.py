@@ -73,7 +73,7 @@ def test_research_build_user_includes_credibility(monkeypatch):
                      suggested_applications=["y"])
     out = rprompt.build_user(cand, "BRIEF")
     assert "20 years building widgets" in out
-    assert "note of experience" in out
+    assert "credibility sentence" in out
 
 
 def test_research_build_user_omits_credibility_when_unset(monkeypatch):

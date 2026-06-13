@@ -51,6 +51,11 @@ OFFERINGS = _req(_company, "company", "offerings")
 DESCRIPTION = _clean(_company.get("description", ""))
 CREDIBILITY = _clean(_company.get("credibility", ""))  # optional trust line for emails
 
+# Optional gold-standard opener exemplars — endorsed sample opening lines the
+# drafter adapts (not copies) to anchor tone/structure. List of strings; each is
+# collapsed to a single tidy block. Empty list if unset.
+EXAMPLE_OPENERS = [_clean(o) for o in (_company.get("example_openers") or []) if str(o).strip()]
+
 # --- targeting -------------------------------------------------------------
 IDEAL_CUSTOMER = _clean(_req(_targeting, "targeting", "ideal_customer"))
 EXCLUDE_COMPETITORS = _clean(_req(_targeting, "targeting", "exclude_competitors"))

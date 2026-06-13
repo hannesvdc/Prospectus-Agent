@@ -57,3 +57,17 @@ def test_empty_domain_or_name_returns_empty():
 def test_no_duplicates():
     out = contacts.guess_emails("Jane Doe", "acme.com")
     assert len(out) == len(set(out))
+
+
+def test_is_credentialed_local_part_flags_credentials():
+    # Credentials/titles leaking into the local-part should be flagged.
+    assert contacts.is_credentialed_local_part("jeremy.phd@acme.com")
+    assert contacts.is_credentialed_local_part("phd@acme.com")
+    assert contacts.is_credentialed_local_part("dr.smith@acme.com")
+    assert contacts.is_credentialed_local_part("jane-md@acme.com")
+
+
+def test_is_credentialed_local_part_allows_real_addresses():
+    assert not contacts.is_credentialed_local_part("jeremy.schrooten@acme.com")
+    assert not contacts.is_credentialed_local_part("info@acme.com")
+    assert not contacts.is_credentialed_local_part("jane.doe@acme.com")

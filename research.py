@@ -106,9 +106,14 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
     # Up to MAX_PEOPLE senior people: published address if found, else a capped
     # number of pattern guesses each.
     for person in result.people[:config.MAX_PEOPLE]:
-        if person.public_email:
+        published = person.public_email.strip() if person.public_email else ""
+        # Reject "addresses" built from a credential/title (e.g. jeremy.phd@) —
+        # treat as not-really-published and fall back to clean pattern guessing.
+        if published and contacts_mod.is_credentialed_local_part(published):
+            published = ""
+        if published:
             db.add_contact(conn, company_id, name=person.name, role=person.title,
-                           email=person.public_email.strip(), email_confidence="public")
+                           email=published, email_confidence="public")
             n_contacts += 1
         else:
             for guess in contacts_mod.guess_emails(person.name, cand.domain)[:config.GUESSES_PER_PERSON]:

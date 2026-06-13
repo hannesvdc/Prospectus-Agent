@@ -38,6 +38,16 @@ def _name_parts(full_name: str) -> tuple[str, str]:
     return _slug(tokens[0]), _slug(tokens[-1])
 
 
+def is_credentialed_local_part(email: str) -> bool:
+    """True if the email's local-part contains an academic/professional credential
+    as a dotted/dashed segment (e.g. "jeremy.phd@", "phd@", "dr.smith@"). Such an
+    address was almost certainly built from a title rather than genuinely published,
+    so callers should discard it and fall back to clean pattern guessing."""
+    local = email.split("@", 1)[0].lower()
+    segments = re.split(r"[._\-+]", local)
+    return any(seg in _SUFFIXES or seg in _HONORIFICS for seg in segments)
+
+
 def guess_emails(full_name: str, domain: str) -> list[str]:
     """Return likely email guesses for a person at a domain (most-likely first)."""
     first, last = _name_parts(full_name)

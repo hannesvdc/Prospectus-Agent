@@ -24,6 +24,15 @@ def build_user(cand, on_profile: str) -> str:
         f'in industry; dress it up naturally, e.g. "{profile.CREDIBILITY}".'
         if profile.CREDIBILITY else ""
     )
+    if profile.EXAMPLE_OPENERS:
+        examples = "\n".join(f'  - "{o}"' for o in profile.EXAMPLE_OPENERS)
+        opener_examples = (
+            "\n\n           GOLD-STANDARD opener example(s) for the tone and two-tier "
+            "framing to aim for (ADAPT the wording to this prospect — do NOT copy "
+            f"verbatim):\n{examples}"
+        )
+    else:
+        opener_examples = ""
     return f"""About {profile.NAME}:
 {on_profile}
 
@@ -41,12 +50,23 @@ crawl the whole site. Confirm what they do and who leads engineering / R&D.
 
 STEP 2 — Return, via `submit_company_outreach`:
 - refined_applications: 2-4 specific, honest ways {profile.NAME} could help, tied to their real work.
-- public_emails: at most ONE generic inbox published on their site (e.g. info@/contact@).
+- public_emails: at most ONE generic inbox actually published on their site. Look for
+  it on the contact/about page and in the site footer — common forms are
+  info@, contact@, hello@, sales@, support@, careers@/jobs@. Include it ONLY if you
+  truly see it on the site; do NOT invent one. If none is published, return none.
 - people: the 3 most senior / relevant decision-makers (e.g. CEO, CTO, VP/Head of
-  Engineering or R&D) — no more than 3, with name + title. Include public_email
-  ONLY if genuinely published, else null. Do NOT guess addresses — we do that separately.
+  Engineering or R&D) — no more than 3, with name + title. For the `name` field use
+  ONLY the person's actual first and last name — STRIP academic/professional titles
+  and credentials (Dr, Prof, PhD, MD, MBA, MSc, P.Eng, etc.); never let them leak into
+  a name or an email. Include public_email ONLY if genuinely published, else null.
+  Do NOT guess addresses (and never build one from a credential like ".phd@") — we
+  generate guesses separately from the clean name.
 - A tailored initial email:
-    * email_subject: accurate, specific, non-spammy.
+    * email_subject: accurate, non-spammy, and framed around the AREAS {profile.NAME}
+      helps with (e.g. simulation, scientific ML/AI, uncertainty quantification,
+      HPC/GPU acceleration, computational advisory) — NOT a guess about the prospect's
+      specific product or internal applications. e.g. "Open Numerics — simulation, AI
+      and HPC for {{their field}}". Name our capability areas, not their use cases.
     * email_body: ~130-200 words, never more than 250. A cold INTRODUCTION and offer
       of services from outside specialists — NOT an industry peer, and never "compare
       notes." Throughout, keep the focus on WHAT'S IN IT FOR THEM — frame everything
@@ -55,8 +75,20 @@ STEP 2 — Return, via `submit_company_outreach`:
         1. Open with a plain one-sentence introduction of {profile.NAME} and what it
            helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
            [audience] with [a few of its capabilities]." Draw the capabilities from what
-           {profile.NAME} offers. Do NOT open by recapping the prospect's own work, and
-           do NOT diagnose their needs (no "your work suggests you need…").
+           {profile.NAME} offers. Present {profile.NAME}'s offering as TWO DISTINCT,
+           clearly-separated TIERS — make the two-tier structure obvious to the reader,
+           e.g. "We do two things:" or "We work at two levels:":
+             (i) WE ADVISE — help teams decide what to model, what's worth accelerating,
+                 ML vs. numerical/simulation, build-vs-outsource, what a computational
+                 roadmap should look like; and
+             (ii) WE CODE — {profile.NAME} then builds and delivers the tools FOR them
+                 (custom solvers, surrogate/ML models, GPU/HPC workflows,
+                 uncertainty-aware analysis).
+           Keep the two tiers visibly separate rather than merged into one run-on
+           sentence. It must NEVER read as advising the client to build it themselves;
+           {profile.NAME} does the hands-on work and hands over working tools.{opener_examples}
+           Do NOT open by recapping the prospect's own work, and do NOT diagnose their
+           needs (no "your work suggests you need…").
         2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps
            with that are relevant to their space, expressed as the benefit to them
            (e.g. faster turnaround, more confidence in results, less compute cost) —
