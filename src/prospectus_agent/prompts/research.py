@@ -46,26 +46,27 @@ def email_rules() -> str:
       HPC/GPU acceleration, computational advisory) — NOT a guess about the prospect's
       specific product or internal applications. e.g. "Open Numerics — simulation, AI
       and HPC for {{their field}}". Name our capability areas, not their use cases.
-    * email_body: ~130-200 words, never more than 250. A cold INTRODUCTION and offer
+    * email_body: ~120-160 words, never more than 200. A cold INTRODUCTION and offer
       of services from outside specialists — NOT an industry peer, and never "compare
-      notes." Write the ENTIRE email as natural, flowing PROSE — short paragraphs only,
-      NO bullet points, numbered lists, or headings anywhere. Throughout, keep the focus
-      on WHAT'S IN IT FOR THEM — frame everything around the outcomes and value they
-      would get, not a feature tour of {profile.NAME}. The numbered points below are
-      instructions to you, not a format for the email. In order:
+      notes." Write the ENTIRE email as natural, flowing PROSE in SHORT paragraphs
+      (2-3 sentences each; keep it skimmable) — NO bullet points, numbered lists, or
+      headings anywhere. Throughout, keep the focus on WHAT'S IN IT FOR THEM — frame
+      everything around the outcomes and value they would get, not a feature tour of
+      {profile.NAME}. The numbered points below are instructions to you, not a format
+      for the email. In order:
         1. Open with a plain one-sentence introduction of {profile.NAME} and what it
            helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
            [audience] with [a few of its capabilities]." Draw the capabilities from what
            {profile.NAME} offers. Convey that {profile.NAME} works at TWO levels —
-           it ADVISES (helps teams decide what to model, what's worth accelerating,
-           ML vs. numerical/simulation, build-vs-outsource, what a computational roadmap
-           should look like) and then it CODES (builds and delivers the tools FOR them:
-           custom solvers, surrogate/ML models, GPU/HPC workflows, uncertainty-aware
-           analysis). Write this as flowing PROSE — a couple of natural sentences. Do
-           NOT format it as a numbered or bulleted list, headings, or "1) … 2) …" — keep
-           it conversational, like the example opener(s) below. It must NEVER read as
-           advising the client to build it themselves; {profile.NAME} does the hands-on
-           work and hands over working tools.{opener_examples}
+           first as ADVISORS (helping teams decide what to model, what's worth
+           accelerating, ML vs. numerical/simulation, where the computational
+           bottlenecks are) and then BUILDING the tools themselves (custom solvers,
+           surrogate/ML models, GPU/HPC workflows, uncertainty-aware analysis). Keep
+           this to ONE short paragraph, conversational, like the example opener(s)
+           below. Phrase the second level as "then we build the tools" — do NOT use
+           stiff role-nouns like "implementers". It must NEVER read as advising the
+           client to build it themselves; {profile.NAME} does the hands-on work and
+           hands over working tools.{opener_examples}
            Do NOT open by recapping the prospect's own work, and do NOT diagnose their
            needs (no "your work suggests you need…").
         2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps

@@ -39,6 +39,18 @@ def _contact_label(c) -> str:
     return f"- {c['email']}  ({tag})"
 
 
+def _recipient_line(contacts) -> str:
+    """Comma-separated address list to paste straight into Gmail's To: field
+    (public addresses first, then guessed — same order as the contact list)."""
+    seen, emails = set(), []
+    for c in contacts:
+        e = (c["email"] or "").strip()
+        if e and e not in seen:
+            seen.add(e)
+            emails.append(e)
+    return ", ".join(emails)
+
+
 def _email_block(conn, em) -> str | None:
     company = db.get_company(conn, em["company_id"])
     if company is None:
@@ -59,6 +71,9 @@ def _email_block(conn, em) -> str | None:
         lines.append("- (no contacts found)")
     if not public and guessed:
         lines.append("> No published address found — these are best-guess addresses; verify before sending.")
+    recipients = _recipient_line(contacts)
+    if recipients:
+        lines.append(f"\n**To (copy):** `{recipients}`")
     lines.append(f"\n**Subject:** {em['subject']}\n")
     lines.append("**Body:**\n")
     lines.append("```")
@@ -110,6 +125,10 @@ def _email_block_html(conn, em) -> str | None:
     if not public and guessed:
         parts.append("<p><em>No published address found — these are best-guess "
                      "addresses; verify before sending.</em></p>")
+    recipients = _recipient_line(contacts)
+    if recipients:
+        parts.append(f"<p><strong>To (copy):</strong> "
+                     f"<code>{html.escape(recipients)}</code></p>")
 
     parts.append(f"<p><strong>Subject:</strong> {html.escape(em['subject'])}</p>")
     parts.append("<p><strong>Body</strong> (copy from here into Gmail):</p>")

@@ -66,6 +66,18 @@ def test_generate_writes_html_with_hyperlink(conn, tmp_path):
     assert "info@acme.com" in html
 
 
+def test_copyable_recipient_line(conn, tmp_path):
+    _seed(conn)  # info@acme.com (public) + jane.doe@acme.com (guessed)
+    today = date.today().isoformat()
+    outbox.generate(conn, out_root=str(tmp_path), today=today)
+
+    index = (tmp_path / today / "index.md").read_text()
+    assert "**To (copy):** `info@acme.com, jane.doe@acme.com`" in index
+
+    html = (tmp_path / today / "index.html").read_text()
+    assert "<code>info@acme.com, jane.doe@acme.com</code>" in html
+
+
 def test_guessed_only_warns(conn, tmp_path):
     _seed(conn, with_public=False)
     today = date.today().isoformat()
