@@ -10,11 +10,18 @@ to profile.example.yaml so a fresh clone still runs.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import yaml
 
-_PATH = os.getenv("PROFILE_PATH", "profile.yaml")
-_FALLBACK = "profile.example.yaml"
+from prospectus_agent import config
+
+# PROFILE_PATH (absolute or relative) overrides the default; relative values and
+# the defaults resolve against the project HOME, so the agent runs from anywhere.
+_raw = (os.getenv("PROFILE_PATH") or "").strip()
+_p = Path(_raw).expanduser() if _raw else Path("profile.yaml")
+_PATH = str(_p if _p.is_absolute() else config.HOME / _p)
+_FALLBACK = str(config.HOME / "profile.example.yaml")
 
 
 def _load() -> tuple[dict, str]:

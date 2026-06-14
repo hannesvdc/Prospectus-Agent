@@ -1,7 +1,7 @@
 """Prompt for refreshing the seller's own profile from its website."""
 from __future__ import annotations
 
-import agent_profile as profile
+from prospectus_agent import agent_profile as profile
 
 SYSTEM = (
     "You produce a tight factual brief of what a company offers, for a writer who "

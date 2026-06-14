@@ -1,6 +1,4 @@
-"""Daily entrypoint for the Open Numerics prospecting agent.
-
-    python daily_run.py
+"""Daily pipeline for the prospecting agent (invoked by `prospectus-agent`).
 
 Pipeline:
   1. Refresh ON's own profile from opennumerics.com (cached per day).
@@ -10,22 +8,23 @@ Pipeline:
   4. Sweep for stale outreach and draft follow-ups.
   5. Print a digest.
 
-You then review drafts and send them yourself, and track replies with status.py.
+You then review drafts and send them yourself, and track replies with
+`prospectus-status`.
 """
 from __future__ import annotations
 
 import sys
 from datetime import date
 
-import agent_profile
-import config
-import db
-import discovery
-import followups
-import llm
-import on_profile
-import outbox
-import research
+from prospectus_agent import agent_profile
+from prospectus_agent import config
+from prospectus_agent import db
+from prospectus_agent import discovery
+from prospectus_agent import followups
+from prospectus_agent import llm
+from prospectus_agent import on_profile
+from prospectus_agent import outbox
+from prospectus_agent import research
 
 
 def _print_digest(winners_summaries: list[dict], followup_summaries: list[dict]) -> None:
@@ -59,9 +58,9 @@ def _print_digest(winners_summaries: list[dict], followup_summaries: list[dict])
         print(f"  ● {f['name']} ({f['domain']}) — {f['business_days']} business days, {status}")
 
     print("\nNext steps:")
-    print("  • Review drafts:   python status.py drafts   →   python status.py show DOMAIN")
-    print("  • After sending:   python status.py mark DOMAIN sent")
-    print("  • On reply:        python status.py mark DOMAIN replied   (or not_interested)")
+    print("  • Review drafts:   prospectus-status drafts   →   prospectus-status show DOMAIN")
+    print("  • After sending:   prospectus-status mark DOMAIN sent")
+    print("  • On reply:        prospectus-status mark DOMAIN replied   (or not_interested)")
     print("=" * 78)
 
 
@@ -101,7 +100,8 @@ def main() -> int:
     written = outbox.generate(conn, since_email_id=emails_before)
     if written:
         out_dir, n = written
-        print(f"\n✉  Wrote {n} draft(s) to {out_dir}/index.md — recipients + subject + body, ready to copy-paste.")
+        print(f"\n✉  Wrote {n} draft(s) to {out_dir}/ (index.md + index.html) — "
+              "recipients + subject + body, ready to copy-paste.")
 
     u = llm.get_usage()
     if u["calls"]:

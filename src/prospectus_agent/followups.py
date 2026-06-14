@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-import config
-import db
-import drafting
+from prospectus_agent import config
+from prospectus_agent import db
+from prospectus_agent import drafting
 
 
 def business_days_since(start_iso: str, end: date | None = None) -> int:

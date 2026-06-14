@@ -19,13 +19,13 @@ from __future__ import annotations
 import json
 from datetime import date
 
-import agent_profile as profile
-import config
-import db
-import sectors
-from llm import WEB_SEARCH_TOOL, run_with_submit
-from prompts import discovery as discovery_prompts
-from schemas import Candidate, DiscoveryResult
+from prospectus_agent import agent_profile as profile
+from prospectus_agent import config
+from prospectus_agent import db
+from prospectus_agent import sectors
+from prospectus_agent.llm import WEB_SEARCH_TOOL, run_with_submit
+from prospectus_agent.prompts import discovery as discovery_prompts
+from prospectus_agent.schemas import Candidate, DiscoveryResult
 
 SUBMIT_CANDIDATES_TOOL = {
     "type": "function",

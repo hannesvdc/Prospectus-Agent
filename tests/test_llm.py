@@ -9,8 +9,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-import config
-import llm
+from prospectus_agent import config
+from prospectus_agent import llm
 from conftest import (
     FakeClient,
     function_call,

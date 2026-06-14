@@ -253,6 +253,19 @@ def add_email(
     return cur.lastrowid
 
 
+def update_email(
+    conn: sqlite3.Connection, email_id: int, *, subject: str, body: str
+) -> bool:
+    """Overwrite an existing draft's subject/body in place (used by refine).
+    Returns True if a row was updated."""
+    cur = conn.execute(
+        "UPDATE emails SET subject=?, body=? WHERE id=?",
+        (subject, body, email_id),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
 def has_email_since(
     conn: sqlite3.Connection, company_id: int, type: str, since_date: str
 ) -> bool:

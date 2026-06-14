@@ -6,12 +6,12 @@ no-signature instruction.
 """
 from __future__ import annotations
 
-import config
-from prompts import discovery as dprompt
-from prompts import followup as fprompt
-from prompts import on_profile as oprompt
-from prompts import research as rprompt
-from schemas import Candidate
+from prospectus_agent import config
+from prospectus_agent.prompts import discovery as dprompt
+from prospectus_agent.prompts import followup as fprompt
+from prospectus_agent.prompts import on_profile as oprompt
+from prospectus_agent.prompts import research as rprompt
+from prospectus_agent.schemas import Candidate
 
 
 def test_discovery_system_carries_provider_distinction():
@@ -22,7 +22,7 @@ def test_discovery_system_carries_provider_distinction():
 
 
 def test_prompts_use_profile_name(monkeypatch):
-    import agent_profile
+    from prospectus_agent import agent_profile
     monkeypatch.setattr(agent_profile, "NAME", "Acme Consulting")
     assert "Acme Consulting" in dprompt.system()
 
@@ -67,7 +67,7 @@ def test_research_build_user_includes_company_and_omits_signature():
 
 
 def test_research_build_user_includes_credibility(monkeypatch):
-    import agent_profile
+    from prospectus_agent import agent_profile
     monkeypatch.setattr(agent_profile, "CREDIBILITY", "20 years building widgets")
     cand = Candidate(name="Acme", domain="acme.com", why_fit="x", fit_score=9,
                      suggested_applications=["y"])
@@ -77,7 +77,7 @@ def test_research_build_user_includes_credibility(monkeypatch):
 
 
 def test_research_build_user_omits_credibility_when_unset(monkeypatch):
-    import agent_profile
+    from prospectus_agent import agent_profile
     monkeypatch.setattr(agent_profile, "CREDIBILITY", "")
     cand = Candidate(name="Acme", domain="acme.com", why_fit="x", fit_score=9,
                      suggested_applications=["y"])

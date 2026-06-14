@@ -10,10 +10,10 @@ import json
 import os
 from datetime import date
 
-import agent_profile
-import config
-from llm import WEB_SEARCH_TOOL, run_text
-from prompts import on_profile as on_profile_prompts
+from prospectus_agent import agent_profile
+from prospectus_agent import config
+from prospectus_agent.llm import WEB_SEARCH_TOOL, run_text
+from prospectus_agent.prompts import on_profile as on_profile_prompts
 
 
 def _cache_is_fresh(cached: dict) -> bool:

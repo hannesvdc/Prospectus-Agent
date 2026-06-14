@@ -8,10 +8,10 @@ from __future__ import annotations
 
 import pytest
 
-import config
-import discovery
-import drafting
-import research
+from prospectus_agent import config
+from prospectus_agent import discovery
+from prospectus_agent import drafting
+from prospectus_agent import research
 
 
 def _assert_strict(schema, path="root"):

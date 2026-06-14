@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-import config
-import db
-import followups
-from schemas import FollowUpResult
+from prospectus_agent import config
+from prospectus_agent import db
+from prospectus_agent import followups
+from prospectus_agent.schemas import FollowUpResult
 
 
 def _next_weekday(d: date, weekday: int) -> date:

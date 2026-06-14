@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from datetime import date
 
-import db
-import outbox
+from prospectus_agent import db
+from prospectus_agent import outbox
 
 
 def _seed(conn, *, domain="acme.com", with_public=True, etype="initial"):
@@ -43,7 +43,7 @@ def test_generate_writes_index(conn, tmp_path):
 
 
 def test_generate_writes_html_with_hyperlink(conn, tmp_path):
-    import agent_profile
+    from prospectus_agent import agent_profile
     cid = db.upsert_company(
         conn, name="Acme", domain="acme.com", hq_location="Denver, CO",
         industry="Automotive", fit_score=9, why_fit="crash sim",
@@ -100,6 +100,22 @@ def test_second_run_same_day_appends(conn, tmp_path):
     index = (tmp_path / today / "index.md").read_text()
     assert "a.com" in index and "b.com" in index          # augmented, not replaced
     assert index.count("# Outreach drafts") == 1           # header not duplicated
+
+
+def test_overwrite_regenerates_fresh(conn, tmp_path):
+    today = date.today().isoformat()
+    _seed(conn, domain="a.com")
+    outbox.generate(conn, out_root=str(tmp_path), today=today)
+
+    # A draft is refined in place, then the outbox is regenerated with overwrite.
+    eid = conn.execute("SELECT id FROM emails LIMIT 1").fetchone()["id"]
+    db.update_email(conn, eid, subject="Refined subject", body="Refined body text")
+    outbox.generate(conn, out_root=str(tmp_path), today=today, overwrite=True)
+
+    index = (tmp_path / today / "index.md").read_text()
+    assert "Refined subject" in index
+    assert "Crash sim for your EVs" not in index        # old content gone
+    assert index.count("# Outreach drafts") == 1        # single fresh header
 
 
 def test_nothing_drafted_returns_none(conn, tmp_path):

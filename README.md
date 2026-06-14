@@ -45,7 +45,7 @@ steer clear of. See `profile.example.yaml` for a fully worked example.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
+.venv/bin/pip install -e ".[dev]"       # installs the package + the `prospectus-agent` command
 cp .env.example .env                    # then add your OPENAI_API_KEY
 cp profile.example.yaml profile.yaml    # then describe YOUR business + ideal customer
 ```
@@ -53,14 +53,19 @@ cp profile.example.yaml profile.yaml    # then describe YOUR business + ideal cu
 That's the whole setup. If `profile.yaml` is missing, it falls back to the example
 so a fresh clone still runs.
 
+The editable install puts a **`prospectus-agent`** command on your venv's PATH, and
+the agent resolves its files (`.env`, `profile.yaml`, the db, the outbox) relative to
+the project folder — so **you can run it from any directory**. To keep the project
+files somewhere else, point `PROSPECTUS_AGENT_HOME` at that folder.
+
 > **Two layers of "template":** `profile.yaml` is the *content* (your business — what
-> you'll edit). `prompts/` holds the actual *prompt templates* — one small Python
-> module per step. Only touch `prompts/` if you want to change the wording or tone of
+> you'll edit). `src/prospectus_agent/prompts/` holds the actual *prompt templates* —
+> one small Python module per step. Only touch it to change the wording or tone of
 > what the agent asks the model.
 
 ## How it works
 
-`python daily_run.py` runs the pipeline:
+`prospectus-agent` runs the pipeline:
 
 1. **Refresh profile** — fetches your company's website (cached; default weekly via
    `PROFILE_REFRESH_DAYS`) so drafts reflect what you currently do.
@@ -75,10 +80,16 @@ so a fresh clone still runs.
    The draft has **no sign-off/signature** — your mail client adds yours on send.
 4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
    and drafts a gentle nudge.
-5. Writes `outbox/<date>/index.md` — each email with its contact list, ready to
-   copy-paste. Running again the same day **appends** the new drafts rather than
-   overwriting, so earlier drafts (and any notes you added) are kept.
+5. Writes `outbox/<date>/index.md` plus a rich `index.html` — each email with its
+   contact list, ready to copy-paste. The HTML version turns every "Open Numerics"
+   mention into a real link, so pasting from a browser into Gmail keeps the hyperlinks.
+   Running again the same day **appends** the new drafts rather than overwriting, so
+   earlier drafts (and any notes you added) are kept.
 6. Prints a digest and a token-usage line so you can see what the run cost.
+
+After tuning the email wording, `prospectus-agent --refine` rewrites **today's**
+existing drafts with the current prompt (no re-discovery or web research — cheap and
+fast), then regenerates the outbox. Contacts you've already curated are left untouched.
 
 Every company it ever sees (fits and non-fits) is stored, so none resurface.
 
@@ -109,14 +120,18 @@ knobs live here (gitignored):
 ## Daily use
 
 ```bash
-.venv/bin/python daily_run.py            # find prospects + draft emails
+prospectus-agent                    # find prospects + draft emails
+prospectus-agent --refine           # re-draft today's emails with the latest prompt
 
-.venv/bin/python status.py drafts        # list drafts ready to review
-.venv/bin/python status.py show DOMAIN   # see the full draft + contacts
+prospectus-status drafts            # list drafts ready to review
+prospectus-status show DOMAIN       # see the full draft + contacts
 # ...you read it, maybe tweak it, and send it from your inbox...
-.venv/bin/python status.py mark DOMAIN sent       # starts the follow-up clock
-.venv/bin/python status.py mark DOMAIN replied    # or: not_interested
+prospectus-status mark DOMAIN sent       # starts the follow-up clock
+prospectus-status mark DOMAIN replied    # or: not_interested
 ```
+
+(With the venv activated, the commands are on your PATH. Otherwise prefix with
+`.venv/bin/`, e.g. `.venv/bin/prospectus-agent`.)
 
 Status values: `new`, `drafted`, `sent`, `replied`, `not_interested`, `not_a_fit`.
 Reply tracking is fully manual — the agent never reads your inbox.
@@ -138,16 +153,19 @@ Reply tracking is fully manual — the agent never reads your inbox.
 
 ## The code
 
-Small and deliberately boring. Engine files know nothing about any particular
-business — everything company-specific lives in `profile.yaml` / `prompts/`.
+Small and deliberately boring. The code lives in `src/prospectus_agent/`; engine
+files know nothing about any particular business — everything company-specific lives
+in `profile.yaml` (at the project root) and `prompts/`.
 
-| File | Role |
+| File (under `src/prospectus_agent/`) | Role |
 |---|---|
-| `daily_run.py` | Pipeline entrypoint |
-| `status.py` | Manual status CLI |
-| `profile.yaml` / `agent_profile.py` | Your business + ICP (the thing you edit) and its loader |
+| `cli.py` | `prospectus-agent` entrypoint (daily run / `--refine`) |
+| `daily_run.py` | Pipeline implementation |
+| `refine.py` / `redraft.py` | Re-draft today's emails with the current prompt (no re-research) + its engine |
+| `status.py` | Manual status CLI (`prospectus-status`) |
+| `agent_profile.py` | Loader for `profile.yaml` (your business + ICP — the thing you edit) |
 | `prompts/` | Prompt templates, one module per step — edit to change wording/tone |
-| `config.py` | Loads `.env`, constants, OpenAI client |
+| `config.py` | Loads `.env`, resolves the project home + paths, OpenAI client |
 | `db.py` | SQLite layer (companies, contacts, emails) |
 | `llm.py` | OpenAI Responses API helpers (web_search + strict tool extraction) |
 | `on_profile.py` | Company website-brief refresh (cached) |
@@ -157,13 +175,13 @@ business — everything company-specific lives in `profile.yaml` / `prompts/`.
 | `drafting.py` | Follow-up drafting |
 | `contacts.py` | Email-pattern guessing |
 | `followups.py` | Business-day follow-up sweep |
-| `outbox.py` | Writes the copy-paste `index.md` digest of drafts |
+| `outbox.py` | Writes the copy-paste `index.md` + hyperlinked `index.html` digests of drafts |
 | `schemas.py` | Pydantic validation models |
 
 ## Tests
 
 ```bash
-.venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pip install -e ".[dev]"   # if you haven't already
 .venv/bin/python -m pytest
 ```
 

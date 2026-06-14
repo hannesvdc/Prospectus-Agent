@@ -5,7 +5,7 @@ from datetime import date
 
 import pytest
 
-import db
+from prospectus_agent import db
 
 
 @pytest.mark.parametrize(

@@ -1,7 +1,7 @@
 """Prompts for per-winner research + initial-email drafting."""
 from __future__ import annotations
 
-import agent_profile as profile
+from prospectus_agent import agent_profile as profile
 
 
 def system() -> str:
@@ -13,26 +13,78 @@ def system() -> str:
     )
 
 
+def _credibility_note() -> str:
+    if not profile.CREDIBILITY:
+        return ""
+    return (
+        ' Include one strong credibility sentence grounded in track record and '
+        'experience — not a re-list of capabilities. Lean on the team\'s deep ties '
+        'to academic research and its hands-on experience delivering for companies '
+        f'in industry; dress it up naturally, e.g. "{profile.CREDIBILITY}".'
+    )
+
+
+def _opener_examples() -> str:
+    if not profile.EXAMPLE_OPENERS:
+        return ""
+    examples = "\n".join(f'  - "{o}"' for o in profile.EXAMPLE_OPENERS)
+    return (
+        "\n\n           GOLD-STANDARD opener example(s) for the tone and two-tier "
+        "framing to aim for (ADAPT the wording to this prospect — do NOT copy "
+        f"verbatim):\n{examples}"
+    )
+
+
+def email_rules() -> str:
+    """The subject + body writing rules for an outreach email. Shared by the
+    initial-draft prompt and the refine/redraft prompt so the two never drift —
+    tweak the email voice here and both paths pick it up."""
+    credibility_note = _credibility_note()
+    opener_examples = _opener_examples()
+    return f"""    * email_subject: accurate, non-spammy, and framed around the AREAS {profile.NAME}
+      helps with (e.g. simulation, scientific ML/AI, uncertainty quantification,
+      HPC/GPU acceleration, computational advisory) — NOT a guess about the prospect's
+      specific product or internal applications. e.g. "Open Numerics — simulation, AI
+      and HPC for {{their field}}". Name our capability areas, not their use cases.
+    * email_body: ~130-200 words, never more than 250. A cold INTRODUCTION and offer
+      of services from outside specialists — NOT an industry peer, and never "compare
+      notes." Write the ENTIRE email as natural, flowing PROSE — short paragraphs only,
+      NO bullet points, numbered lists, or headings anywhere. Throughout, keep the focus
+      on WHAT'S IN IT FOR THEM — frame everything around the outcomes and value they
+      would get, not a feature tour of {profile.NAME}. The numbered points below are
+      instructions to you, not a format for the email. In order:
+        1. Open with a plain one-sentence introduction of {profile.NAME} and what it
+           helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
+           [audience] with [a few of its capabilities]." Draw the capabilities from what
+           {profile.NAME} offers. Convey that {profile.NAME} works at TWO levels —
+           it ADVISES (helps teams decide what to model, what's worth accelerating,
+           ML vs. numerical/simulation, build-vs-outsource, what a computational roadmap
+           should look like) and then it CODES (builds and delivers the tools FOR them:
+           custom solvers, surrogate/ML models, GPU/HPC workflows, uncertainty-aware
+           analysis). Write this as flowing PROSE — a couple of natural sentences. Do
+           NOT format it as a numbered or bulleted list, headings, or "1) … 2) …" — keep
+           it conversational, like the example opener(s) below. It must NEVER read as
+           advising the client to build it themselves; {profile.NAME} does the hands-on
+           work and hands over working tools.{opener_examples}
+           Do NOT open by recapping the prospect's own work, and do NOT diagnose their
+           needs (no "your work suggests you need…").
+        2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps
+           with that are relevant to their space, expressed as the benefit to them
+           (e.g. faster turnaround, more confidence in results, less compute cost) —
+           illustrative, not prescriptive; one or two light, plausible connections to
+           their domain. Do NOT prescribe fixes for their specific product or claim to
+           know their internals.
+        3. A simple, low-pressure ask for a short intro call to see whether
+           {profile.NAME} could be useful to them.
+      Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
+      Do NOT add a signature, sender name, title, company, or contact details — the
+      sender's email client appends their own on send."""
+
+
 def build_user(cand, on_profile: str) -> str:
     """`cand` is a schemas.Candidate (duck-typed: name/domain/industry/why_fit/
     suggested_applications)."""
     apps = "\n".join(f"- {a}" for a in cand.suggested_applications) or "(none yet)"
-    credibility_note = (
-        f' Include one strong credibility sentence grounded in track record and '
-        f'experience — not a re-list of capabilities. Lean on the team\'s deep ties '
-        f'to academic research and its hands-on experience delivering for companies '
-        f'in industry; dress it up naturally, e.g. "{profile.CREDIBILITY}".'
-        if profile.CREDIBILITY else ""
-    )
-    if profile.EXAMPLE_OPENERS:
-        examples = "\n".join(f'  - "{o}"' for o in profile.EXAMPLE_OPENERS)
-        opener_examples = (
-            "\n\n           GOLD-STANDARD opener example(s) for the tone and two-tier "
-            "framing to aim for (ADAPT the wording to this prospect — do NOT copy "
-            f"verbatim):\n{examples}"
-        )
-    else:
-        opener_examples = ""
     return f"""About {profile.NAME}:
 {on_profile}
 
@@ -62,43 +114,6 @@ STEP 2 — Return, via `submit_company_outreach`:
   Do NOT guess addresses (and never build one from a credential like ".phd@") — we
   generate guesses separately from the clean name.
 - A tailored initial email:
-    * email_subject: accurate, non-spammy, and framed around the AREAS {profile.NAME}
-      helps with (e.g. simulation, scientific ML/AI, uncertainty quantification,
-      HPC/GPU acceleration, computational advisory) — NOT a guess about the prospect's
-      specific product or internal applications. e.g. "Open Numerics — simulation, AI
-      and HPC for {{their field}}". Name our capability areas, not their use cases.
-    * email_body: ~130-200 words, never more than 250. A cold INTRODUCTION and offer
-      of services from outside specialists — NOT an industry peer, and never "compare
-      notes." Throughout, keep the focus on WHAT'S IN IT FOR THEM — frame everything
-      around the outcomes and value they would get, not a feature tour of {profile.NAME}.
-      In order:
-        1. Open with a plain one-sentence introduction of {profile.NAME} and what it
-           helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
-           [audience] with [a few of its capabilities]." Draw the capabilities from what
-           {profile.NAME} offers. Present {profile.NAME}'s offering as TWO DISTINCT,
-           clearly-separated TIERS — make the two-tier structure obvious to the reader,
-           e.g. "We do two things:" or "We work at two levels:":
-             (i) WE ADVISE — help teams decide what to model, what's worth accelerating,
-                 ML vs. numerical/simulation, build-vs-outsource, what a computational
-                 roadmap should look like; and
-             (ii) WE CODE — {profile.NAME} then builds and delivers the tools FOR them
-                 (custom solvers, surrogate/ML models, GPU/HPC workflows,
-                 uncertainty-aware analysis).
-           Keep the two tiers visibly separate rather than merged into one run-on
-           sentence. It must NEVER read as advising the client to build it themselves;
-           {profile.NAME} does the hands-on work and hands over working tools.{opener_examples}
-           Do NOT open by recapping the prospect's own work, and do NOT diagnose their
-           needs (no "your work suggests you need…").
-        2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps
-           with that are relevant to their space, expressed as the benefit to them
-           (e.g. faster turnaround, more confidence in results, less compute cost) —
-           illustrative, not prescriptive; one or two light, plausible connections to
-           their domain. Do NOT prescribe fixes for their specific product or claim to
-           know their internals.
-        3. A simple, low-pressure ask for a short intro call to see whether
-           {profile.NAME} could be useful to them.
-      Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
-      Do NOT add a signature, sender name, title, company, or contact details — the
-      sender's email client appends their own on send.
+{email_rules()}
 - draft_notes: anything the sender should know before sending.
 """

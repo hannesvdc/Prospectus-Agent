@@ -3,11 +3,11 @@ prompts/ (prompts.followup).
 """
 from __future__ import annotations
 
-import config
-import db
-from llm import run_with_submit
-from prompts import followup as followup_prompts
-from schemas import FollowUpResult
+from prospectus_agent import config
+from prospectus_agent import db
+from prospectus_agent.llm import run_with_submit
+from prospectus_agent.prompts import followup as followup_prompts
+from prospectus_agent.schemas import FollowUpResult
 
 SUBMIT_FOLLOWUP_TOOL = {
     "type": "function",

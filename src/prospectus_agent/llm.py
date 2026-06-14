@@ -24,7 +24,7 @@ from __future__ import annotations
 import json
 from typing import Optional
 
-import config
+from prospectus_agent import config
 
 # Hosted web search tool. search_context_size bounds how much search/page content
 # is pulled into context (low|medium|high) — the main per-call token lever.

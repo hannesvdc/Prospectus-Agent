@@ -1,7 +1,7 @@
 """Tests for deterministic email-pattern guessing."""
 from __future__ import annotations
 
-import contacts
+from prospectus_agent import contacts
 
 
 def test_basic_patterns_and_order():

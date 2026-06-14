@@ -22,8 +22,9 @@ import os
 import re
 from datetime import date
 
-import agent_profile
-import db
+from prospectus_agent import agent_profile
+from prospectus_agent import config
+from prospectus_agent import db
 
 
 def _split_contacts(contacts):
@@ -118,15 +119,19 @@ def _email_block_html(conn, em) -> str | None:
     return "\n".join(parts)
 
 
-def generate(conn, *, out_root: str = "outbox", today: str | None = None,
-             since_email_id: int | None = None):
-    """Write today's drafts to <out_root>/<date>/index.md, appending if the file
-    already exists. With `since_email_id`, only emails newer than that id (i.e.
-    this run's drafts) are written — so re-running the same day augments the file.
-    Returns (out_dir, count) or None if there's nothing new to write."""
+def generate(conn, *, out_root: str | None = None, today: str | None = None,
+             since_email_id: int | None = None, overwrite: bool = False):
+    """Write today's drafts to <out_root>/<date>/index.md and index.html.
+
+    By default APPENDS if the files already exist (so re-running the same day
+    augments them); with `since_email_id`, only emails newer than that id are
+    written. With `overwrite=True`, ALL of today's drafts are rewritten from
+    scratch (used by the refine flow after drafts change in place).
+    Returns (out_dir, count) or None if there's nothing to write."""
+    out_root = out_root or config.OUTBOX_DIR
     today = today or date.today().isoformat()
     emails = db.emails_on(conn, today)
-    if since_email_id is not None:
+    if since_email_id is not None and not overwrite:
         emails = [e for e in emails if e["id"] > since_email_id]
     blocks = [b for b in (_email_block(conn, em) for em in emails) if b]
     if not blocks:
@@ -137,16 +142,16 @@ def generate(conn, *, out_root: str = "outbox", today: str | None = None,
     os.makedirs(out_dir, exist_ok=True)
 
     md_path = os.path.join(out_dir, "index.md")
-    md_exists = os.path.exists(md_path)
-    with open(md_path, "a" if md_exists else "w") as f:
-        if not md_exists:
+    md_fresh = overwrite or not os.path.exists(md_path)
+    with open(md_path, "w" if md_fresh else "a") as f:
+        if md_fresh:
             f.write(f"# Outreach drafts — {today}\n\n")
         f.write("\n".join(blocks) + "\n")
 
     html_path = os.path.join(out_dir, "index.html")
-    html_exists = os.path.exists(html_path)
-    with open(html_path, "a" if html_exists else "w") as f:
-        if not html_exists:
+    html_fresh = overwrite or not os.path.exists(html_path)
+    with open(html_path, "w" if html_fresh else "a") as f:
+        if html_fresh:
             f.write(f'<!DOCTYPE html>\n<html><head><meta charset="utf-8">\n'
                     f"<title>Outreach drafts — {today}</title></head>\n<body>\n"
                     f"<h1>Outreach drafts — {today}</h1>\n")

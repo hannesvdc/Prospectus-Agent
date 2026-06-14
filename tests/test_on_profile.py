@@ -3,8 +3,8 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
-import config
-import on_profile
+from prospectus_agent import config
+from prospectus_agent import on_profile
 
 
 def test_cache_fresh_within_window(monkeypatch):

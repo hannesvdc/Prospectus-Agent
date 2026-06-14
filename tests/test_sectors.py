@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-import sectors
+from prospectus_agent import sectors
 
 
 @pytest.mark.parametrize("text,expected", [

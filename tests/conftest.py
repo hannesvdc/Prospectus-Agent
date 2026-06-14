@@ -8,16 +8,13 @@ items the llm helpers inspect (function calls, hosted web_search calls, messages
 from __future__ import annotations
 
 import json
-import os
-import sys
 from types import SimpleNamespace
 
 import pytest
 
-# Make the project root importable when pytest runs from anywhere.
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-import db  # noqa: E402
+# The `prospectus_agent` package is importable via pytest's `pythonpath = ["src"]`
+# (see pyproject.toml), so no sys.path juggling is needed here.
+from prospectus_agent import db
 
 
 @pytest.fixture

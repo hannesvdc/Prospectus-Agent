@@ -17,12 +17,23 @@ dev = [
     "pytest>=8.0",
 ]
 
-# This is a script application, not an installable library, so there is no
-# [build-system] / package layout. Install the dependencies into a venv with:
+[project.scripts]
+prospectus-agent = "prospectus_agent.cli:main"
+prospectus-status = "prospectus_agent.status:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# src/ layout: the importable package is `prospectus_agent`. Install it (and the
+# `prospectus-agent` command) into a venv with an editable install:
 #   python -m venv .venv
-#   .venv/bin/pip install -r requirements.txt -r requirements-dev.txt
-# The [project] dependencies above are the source of truth that those files mirror.
+#   .venv/bin/pip install -e ".[dev]"
+# The [project] dependencies above are the source of truth that requirements*.txt mirror.
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+pythonpath = ["src"]

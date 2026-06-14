@@ -1,10 +1,10 @@
 """Manual status CLI — you drive outreach state with this (no inbox access).
 
 Usage:
-    python status.py list [STATUS]        # list all companies, or only one status
-    python status.py show DOMAIN          # full detail: company, contacts, emails
-    python status.py mark DOMAIN STATUS    # update status (mark sent => starts follow-up clock)
-    python status.py drafts                # show companies with drafts ready to send
+    prospectus-status list [STATUS]      # list all companies, or only one status
+    prospectus-status show DOMAIN        # full detail: company, contacts, emails
+    prospectus-status mark DOMAIN STATUS  # update status (mark sent => starts follow-up clock)
+    prospectus-status drafts             # show companies with drafts ready to send
 
 STATUS is one of: new, drafted, sent, replied, not_interested, not_a_fit
 Marking 'sent' records today as the last-contact date (drives the follow-up timer).
@@ -14,8 +14,8 @@ from __future__ import annotations
 import argparse
 import sys
 
-import config
-import db
+from prospectus_agent import config
+from prospectus_agent import db
 
 
 def _conn():

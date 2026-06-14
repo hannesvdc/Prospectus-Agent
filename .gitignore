@@ -4,6 +4,9 @@ __pycache__/
 *$py.class
 **/.DS_Store
 
+# Personal outbox
+outbox/**
+
 # C extensions
 *.so
 

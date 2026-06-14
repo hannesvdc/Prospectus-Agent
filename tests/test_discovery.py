@@ -6,9 +6,9 @@ backlog seeding, stop-early on target, and accumulation across rounds.
 """
 from __future__ import annotations
 
-import config
-import db
-import discovery
+from prospectus_agent import config
+from prospectus_agent import db
+from prospectus_agent import discovery
 
 
 def _cand(name, domain, score, *, provider=False, why="reason", industry="Aerospace", size="mid"):
@@ -124,7 +124,7 @@ def test_accumulates_across_rounds(conn, monkeypatch):
 # --- diversifier ----------------------------------------------------------
 
 def _sector_of(cand):
-    import sectors
+    from prospectus_agent import sectors
     return sectors.classify(cand.industry, cand.why_fit)
 
 

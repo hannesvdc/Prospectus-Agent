@@ -6,10 +6,10 @@ nothing.
 """
 from __future__ import annotations
 
-import config
-import db
-import research
-from schemas import Candidate
+from prospectus_agent import config
+from prospectus_agent import db
+from prospectus_agent import research
+from prospectus_agent.schemas import Candidate
 
 
 def _caps(monkeypatch, *, public=1, people=3, guesses=1):

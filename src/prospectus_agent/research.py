@@ -8,12 +8,12 @@ pattern-guessed) and the email draft, and mark the company 'drafted'.
 """
 from __future__ import annotations
 
-import config
-import contacts as contacts_mod
-import db
-from llm import WEB_SEARCH_TOOL, run_with_submit
-from prompts import research as research_prompts
-from schemas import Candidate, OutreachResult
+from prospectus_agent import config
+from prospectus_agent import contacts as contacts_mod
+from prospectus_agent import db
+from prospectus_agent.llm import WEB_SEARCH_TOOL, run_with_submit
+from prospectus_agent.prompts import research as research_prompts
+from prospectus_agent.schemas import Candidate, OutreachResult
 
 SUBMIT_OUTREACH_TOOL = {
     "type": "function",

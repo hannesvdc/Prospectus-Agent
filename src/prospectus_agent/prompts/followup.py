@@ -1,8 +1,8 @@
 """Prompts for follow-up email drafting."""
 from __future__ import annotations
 
-import agent_profile as profile
-import config
+from prospectus_agent import agent_profile as profile
+from prospectus_agent import config
 
 
 def system() -> str:

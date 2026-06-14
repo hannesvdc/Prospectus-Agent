@@ -7,7 +7,7 @@ wins; order matters (most specific / highest-priority first).
 """
 from __future__ import annotations
 
-import agent_profile
+from prospectus_agent import agent_profile
 
 # Default taxonomy (engineering/science oriented). A profile may override it via
 # a `sectors:` block in profile.yaml. Ordered: first bucket with a hit wins.
