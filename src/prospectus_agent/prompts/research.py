@@ -58,15 +58,22 @@ def email_rules() -> str:
            helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
            [audience] with [a few of its capabilities]." Draw the capabilities from what
            {profile.NAME} offers. Convey that {profile.NAME} works at TWO levels —
-           first as ADVISORS (helping teams decide what to model, what's worth
-           accelerating, ML vs. numerical/simulation, where the computational
-           bottlenecks are) and then BUILDING the tools themselves (custom solvers,
-           surrogate/ML models, GPU/HPC workflows, uncertainty-aware analysis). Keep
-           this to ONE short paragraph, conversational, like the example opener(s)
-           below. Phrase the second level as "then we build the tools" — do NOT use
-           stiff role-nouns like "implementers". It must NEVER read as advising the
-           client to build it themselves; {profile.NAME} does the hands-on work and
-           hands over working tools.{opener_examples}
+           it ADVISES (helping teams see where modeling, simulation, ML, or
+           acceleration can make the biggest difference, and define the path forward)
+           and then BUILDS the software/workflows itself. Keep it LIGHT and easy to
+           read: a short sentence or two for the advise-then-build idea, then you MAY
+           add ONE short follow-up sentence naming a few example tools (as the example
+           opener does, e.g. "That can include custom solvers, surrogate models,
+           GPU/HPC workflows, and uncertainty-aware analysis."). Do NOT cram the dual
+           purpose AND the tool list into a single heavy sentence; the specific value
+           belongs in the next paragraph. Conversational, like the example opener(s)
+           below. Phrase the build side as "then we build…" — do NOT use stiff
+           role-nouns like "implementers". Avoid phrasing that implies the client
+           doesn't understand their own work — NEVER say "decide what to model" or
+           "what to model" (condescending); "decide where [techniques] can make the
+           biggest difference" is good. It must NEVER read as advising the client to
+           build it themselves; {profile.NAME} does the hands-on work and hands over
+           working tools.{opener_examples}
            Do NOT open by recapping the prospect's own work, and do NOT diagnose their
            needs (no "your work suggests you need…").
         2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps

@@ -19,11 +19,11 @@ company:
   # Omit the field entirely if you'd rather let the model write openers unguided.
   example_openers:
     - >
-      I'm reaching out to introduce Open Numerics. Our work combines advisory and
-      implementation: we help teams find the modeling and computational
-      bottlenecks that matter, define a practical path forward, and then build the
-      tools to support it, from custom solvers and surrogate models to GPU/HPC
-      workflows and uncertainty-aware analysis systems.
+      I'm reaching out to introduce Open Numerics. We help technical teams decide
+      where modeling, simulation, ML, or acceleration can make the biggest
+      difference, then build the software and workflows to put those decisions
+      into practice. That can include custom solvers, surrogate models, GPU/HPC
+      workflows, and uncertainty-aware analysis tools.
   # Fallback description, used only if the website can't be fetched.
   description: >
     Open Numerics provides specialist scientific-computing services: numerical
