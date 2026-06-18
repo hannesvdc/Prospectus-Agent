@@ -40,8 +40,8 @@ What {profile.NAME} offers:
 {offerings}
 
 TASK: Use web search (a few focused searches — don't over-search) to find up to 6
-{config.TARGET_REGION}-based companies that would BENEFIT FROM what {profile.NAME}
-offers — i.e. companies with their own problems that its services could solve.
+companies that would BENEFIT FROM what {profile.NAME} offers — i.e. companies with
+their own problems that its services could solve. Geographic focus: {profile.REGION}.
 Focus this round on: {angle}. Keep `why_fit` to one sentence and
 `suggested_applications` short.
 {avoid_block}

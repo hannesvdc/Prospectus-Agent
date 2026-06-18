@@ -62,6 +62,9 @@ company:
     - high-performance and parallel computing for modelling workloads
 
 targeting:
+  # Geographic focus for discovery (optional). Falls back to $TARGET_REGION in .env,
+  # then "North America". Use "Global" (or "worldwide") for no geographic limit.
+  region: North America
   # Who is a GOOD prospect — end-users with their own problems you could solve.
   ideal_customer: >
     Companies with their own engineering, R&D, or scientific problems that heavy

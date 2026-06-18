@@ -75,6 +75,9 @@ IDEAL_CUSTOMER = _clean(_req(_targeting, "targeting", "ideal_customer"))
 EXCLUDE_COMPETITORS = _clean(_req(_targeting, "targeting", "exclude_competitors"))
 INDUSTRY_ANGLES = _req(_targeting, "targeting", "industry_angles")
 TOO_BIG_EXAMPLES = _targeting.get("too_big_examples") or []
+# Geographic focus for discovery — per-profile; falls back to $TARGET_REGION (.env)
+# then the built-in default. Use "Global" (or "worldwide") for no geographic limit.
+REGION = _clean(_targeting.get("region", "")) or config.TARGET_REGION
 
 # --- optional sector taxonomy override -------------------------------------
 SECTORS = _DATA.get("sectors")  # dict[bucket -> list[keyword]] or None (use default)
