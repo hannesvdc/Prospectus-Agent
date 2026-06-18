@@ -12,6 +12,10 @@ else $DEFAULT_PROFILE in .env) drives per-business path defaults — profile.<p>
 <p>.db, outbox/<p>/, <p>_brief_cache.json — so every entry point (daily run, refine,
 status) stays consistent. With no profile set, the legacy single-business defaults
 apply (profile.yaml, prospects.db, outbox/).
+
+Per-business tunables: a profile may include a `settings:` block (e.g.
+target_company_count: 5) that OVERRIDES the corresponding .env value for that
+business. Precedence is: profile settings > environment (.env / shell) > default.
 """
 from __future__ import annotations
 
@@ -42,8 +46,36 @@ def _path(env_name: str, default_name: str) -> str:
 PROFILE_PATH = _path("PROFILE_PATH", _profiled("profile.yaml", "profile.{p}.yaml"))
 
 
+def _load_settings() -> dict:
+    """The active profile's optional `settings:` block — per-business overrides of
+    the .env tunables (e.g. target_company_count). Keys are upper-cased to match the
+    env var names. Falls back to the example profile if the active one is missing."""
+    import yaml
+    path = PROFILE_PATH if os.path.exists(PROFILE_PATH) else str(HOME / "profile.example.yaml")
+    try:
+        with open(path) as f:
+            data = yaml.safe_load(f) or {}
+    except (OSError, yaml.YAMLError):
+        return {}
+    block = data.get("settings") or {}
+    return {str(k).upper(): v for k, v in block.items()} if isinstance(block, dict) else {}
+
+
+_SETTINGS = _load_settings()
+
+
+def _raw(name: str):
+    """Effective raw value for a tunable, as a string or None. Precedence:
+    profile `settings:` (per-business) > environment (.env / shell) > None.
+    (Secrets like the API key are read straight from the env, not via this.)"""
+    if name in _SETTINGS:
+        v = _SETTINGS[name]
+        return None if v is None else str(v)
+    return os.getenv(name)
+
+
 def _int(name: str, default: int) -> int:
-    raw = os.getenv(name)
+    raw = _raw(name)
     if raw is None or raw.strip() == "":
         return default
     try:
@@ -53,8 +85,8 @@ def _int(name: str, default: int) -> int:
 
 
 def _list(name: str) -> list[str]:
-    """Comma-separated env var -> lowercased list (empty if unset)."""
-    return [s.strip().lower() for s in os.getenv(name, "").split(",") if s.strip()]
+    """Comma-separated tunable -> lowercased list (empty if unset)."""
+    return [s.strip().lower() for s in (_raw(name) or "").split(",") if s.strip()]
 
 
 # --- Secrets ---------------------------------------------------------------
@@ -72,21 +104,21 @@ OUTBOX_DIR = _path("OUTBOX_DIR", _profiled("outbox", "outbox/{p}"))
 # --- Pipeline tunables -----------------------------------------------------
 # gpt-5.4-mini is ~6.6x cheaper than gpt-5.5 and plenty for scoring + short email
 # drafting. Bump to gpt-5.4 or gpt-5.5 if you find draft quality lacking.
-MODEL = os.getenv("OPENAI_MODEL", "gpt-5.4-mini").strip()
+MODEL = (_raw("OPENAI_MODEL") or "gpt-5.4-mini").strip()
 
 # --- Token / cost controls -------------------------------------------------
 # gpt-5.x reasoning effort: none|minimal|low|medium|high|xhigh. Lower = fewer
 # (hidden) reasoning tokens. Discovery/profile are mechanical -> low. Bump
 # DRAFTING_EFFORT to medium/high if email quality dips.
-DISCOVERY_MODEL = os.getenv("DISCOVERY_MODEL", MODEL).strip()  # e.g. a cheaper gpt-5-mini
-DISCOVERY_EFFORT = os.getenv("DISCOVERY_EFFORT", "low").strip()
-DRAFTING_EFFORT = os.getenv("DRAFTING_EFFORT", "low").strip()
+DISCOVERY_MODEL = (_raw("DISCOVERY_MODEL") or MODEL).strip()  # e.g. a cheaper gpt-5-mini
+DISCOVERY_EFFORT = (_raw("DISCOVERY_EFFORT") or "low").strip()
+DRAFTING_EFFORT = (_raw("DRAFTING_EFFORT") or "low").strip()
 # How much web-search content the tool pulls into context: low|medium|high.
-SEARCH_CONTEXT_SIZE = os.getenv("SEARCH_CONTEXT_SIZE", "low").strip()
+SEARCH_CONTEXT_SIZE = (_raw("SEARCH_CONTEXT_SIZE") or "low").strip()
 DISCOVERY_MAX_TOKENS = _int("DISCOVERY_MAX_TOKENS", 8000)
 DRAFT_MAX_TOKENS = _int("DRAFT_MAX_TOKENS", 4000)
 PROFILE_MAX_TOKENS = _int("PROFILE_MAX_TOKENS", 2000)
-TARGET_REGION = os.getenv("TARGET_REGION", "North America").strip()
+TARGET_REGION = (_raw("TARGET_REGION") or "North America").strip()
 FIT_SCORE_THRESHOLD = _int("FIT_SCORE_THRESHOLD", 7)
 TARGET_COMPANY_COUNT = _int("TARGET_COMPANY_COUNT", 5)
 # Max companies from any one sector among a day's picks (diversifier).
@@ -98,7 +130,7 @@ AVOID_SECTORS = _list("AVOID_SECTORS")
 # Company-size ceiling. Picks larger than MAX_COMPANY_SIZE are excluded (a boutique
 # seller's realistic prospects aren't household-name giants).
 COMPANY_SIZE_ORDER = ["startup", "small", "mid", "large", "enterprise"]
-MAX_COMPANY_SIZE = os.getenv("MAX_COMPANY_SIZE", "mid").strip().lower()
+MAX_COMPANY_SIZE = (_raw("MAX_COMPANY_SIZE") or "mid").strip().lower()
 MAX_DISCOVERY_CALLS = _int("MAX_DISCOVERY_CALLS", 2)
 
 # Cap how many already-seen companies are sent as a "don't repeat" hint. The DB

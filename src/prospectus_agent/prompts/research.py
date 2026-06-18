@@ -81,8 +81,12 @@ def email_rules() -> str:
            illustrative, not prescriptive; one or two light, plausible connections to
            their domain. Do NOT prescribe fixes for their specific product or claim to
            know their internals.
-        3. A simple, low-pressure ask for a short next step (e.g. a brief intro call)
-           to see whether {profile.NAME} could be useful to them.
+        3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
+           intro call), framed around the VALUE to them — e.g. "to see where we could
+           help" or "to explore how {profile.NAME} could create value for your team".
+           Make it concrete and to the point; do NOT use vague, weak phrasings like
+           "to see whether there's a fit" or "if it would be useful". Keep it warm and
+           pressure-free, but the ask should sound purposeful.
       Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
       Do NOT add a signature, sender name, title, company, or contact details — the
       sender's email client appends their own on send."""

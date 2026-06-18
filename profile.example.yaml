@@ -61,6 +61,17 @@ company:
     - GPU acceleration of scientific and engineering compute
     - high-performance and parallel computing for modelling workloads
 
+# OPTIONAL — per-business overrides of the .env tunables. Anything here wins over
+# .env for THIS profile only (precedence: settings > .env > built-in default), so
+# different businesses can run different cadences. Key names match the .env vars
+# (case-insensitive). Omit the whole block to just use .env. Examples:
+# settings:
+#   target_company_count: 5      # how many companies to draft per run
+#   max_per_sector: 3            # diversifier cap per sector
+#   fit_score_threshold: 7       # min fit score (0-10) to qualify
+#   max_discovery_calls: 3       # web-search rounds per run
+#   max_company_size: mid        # startup|small|mid|large|enterprise
+
 targeting:
   # Geographic focus for discovery (optional). Falls back to $TARGET_REGION in .env,
   # then "North America". Use "Global" (or "worldwide") for no geographic limit.
