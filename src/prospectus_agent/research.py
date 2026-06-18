@@ -8,6 +8,7 @@ pattern-guessed) and the email draft, and mark the company 'drafted'.
 """
 from __future__ import annotations
 
+from prospectus_agent import agent_profile as profile
 from prospectus_agent import config
 from prospectus_agent import contacts as contacts_mod
 from prospectus_agent import db
@@ -26,7 +27,7 @@ SUBMIT_OUTREACH_TOOL = {
             "refined_applications": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "2-4 concrete ON applications grounded in the company's real work",
+                "description": f"2-4 concrete ways {profile.NAME} could help, grounded in the company's real work",
             },
             "public_emails": {
                 "type": "array",

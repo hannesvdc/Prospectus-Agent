@@ -18,9 +18,7 @@ def _credibility_note() -> str:
         return ""
     return (
         ' Include one strong credibility sentence grounded in track record and '
-        'experience — not a re-list of capabilities. Lean on the team\'s deep ties '
-        'to academic research and its hands-on experience delivering for companies '
-        f'in industry; dress it up naturally, e.g. "{profile.CREDIBILITY}".'
+        f'experience (not a re-list of capabilities), e.g. "{profile.CREDIBILITY}".'
     )
 
 
@@ -29,61 +27,62 @@ def _opener_examples() -> str:
         return ""
     examples = "\n".join(f'  - "{o}"' for o in profile.EXAMPLE_OPENERS)
     return (
-        "\n\n           GOLD-STANDARD opener example(s) for the tone and two-tier "
-        "framing to aim for (ADAPT the wording to this prospect — do NOT copy "
-        f"verbatim):\n{examples}"
+        "\n\n           GOLD-STANDARD opener example(s) for the tone and structure to "
+        "aim for (ADAPT the wording to this prospect — do NOT copy verbatim):\n"
+        f"{examples}"
     )
+
+
+def _voice_notes_block() -> str:
+    """Business-specific framing dos/don'ts (profile.voice_notes). These carry the
+    seller's messaging (e.g. how to describe what they do, words to avoid) so the
+    generic engine stays business-agnostic."""
+    if not profile.VOICE_NOTES:
+        return ""
+    notes = "\n".join(f"           - {n}" for n in profile.VOICE_NOTES)
+    return (f"\n           Follow these {profile.NAME}-specific voice notes when "
+            f"writing the email:\n{notes}")
 
 
 def email_rules() -> str:
     """The subject + body writing rules for an outreach email. Shared by the
-    initial-draft prompt and the refine/redraft prompt so the two never drift —
-    tweak the email voice here and both paths pick it up."""
+    initial-draft prompt and the refine/redraft prompt so the two never drift.
+
+    The GENERIC skeleton (prose not lists, value-to-them, greeting/CTA/no-signature,
+    word count) lives here; everything business-specific is pulled from the profile
+    (capability_areas, voice_notes, credibility, example_openers) so the engine
+    serves any seller, not just Open Numerics."""
     credibility_note = _credibility_note()
     opener_examples = _opener_examples()
+    voice_notes = _voice_notes_block()
+    areas = (f" (e.g. {', '.join(profile.CAPABILITY_AREAS)})"
+             if profile.CAPABILITY_AREAS else "")
     return f"""    * email_subject: accurate, non-spammy, and framed around the AREAS {profile.NAME}
-      helps with (e.g. simulation, scientific ML/AI, uncertainty quantification,
-      HPC/GPU acceleration, computational advisory) — NOT a guess about the prospect's
-      specific product or internal applications. e.g. "Open Numerics — simulation, AI
-      and HPC for {{their field}}". Name our capability areas, not their use cases.
+      helps with{areas} — NOT a guess about the prospect's specific product or internal
+      applications. Name {profile.NAME}'s capability areas, not the prospect's use cases.
     * email_body: ~120-160 words, never more than 200. A cold INTRODUCTION and offer
-      of services from outside specialists — NOT an industry peer, and never "compare
-      notes." Write the ENTIRE email as natural, flowing PROSE in SHORT paragraphs
-      (2-3 sentences each; keep it skimmable) — NO bullet points, numbered lists, or
+      from an outside specialist — NOT an industry peer, and never "compare notes."
+      Write the ENTIRE email as natural, flowing PROSE in SHORT paragraphs (2-3
+      sentences each; keep it skimmable) — NO bullet points, numbered lists, or
       headings anywhere. Throughout, keep the focus on WHAT'S IN IT FOR THEM — frame
       everything around the outcomes and value they would get, not a feature tour of
       {profile.NAME}. The numbered points below are instructions to you, not a format
       for the email. In order:
         1. Open with a plain one-sentence introduction of {profile.NAME} and what it
-           helps teams do — e.g. "I'm reaching out to introduce {profile.NAME}. We help
-           [audience] with [a few of its capabilities]." Draw the capabilities from what
-           {profile.NAME} offers. Convey that {profile.NAME} works at TWO levels —
-           it ADVISES (helping teams see where modeling, simulation, ML, or
-           acceleration can make the biggest difference, and define the path forward)
-           and then BUILDS the software/workflows itself. Keep it LIGHT and easy to
-           read: a short sentence or two for the advise-then-build idea, then you MAY
-           add ONE short follow-up sentence naming a few example tools (as the example
-           opener does, e.g. "That can include custom solvers, surrogate models,
-           GPU/HPC workflows, and uncertainty-aware analysis."). Do NOT cram the dual
-           purpose AND the tool list into a single heavy sentence; the specific value
-           belongs in the next paragraph. Conversational, like the example opener(s)
-           below. Phrase the build side as "then we build…" — do NOT use stiff
-           role-nouns like "implementers". Avoid phrasing that implies the client
-           doesn't understand their own work — NEVER say "decide what to model" or
-           "what to model" (condescending); "decide where [techniques] can make the
-           biggest difference" is good. It must NEVER read as advising the client to
-           build it themselves; {profile.NAME} does the hands-on work and hands over
-           working tools.{opener_examples}
+           helps its audience do — e.g. "I'm reaching out to introduce {profile.NAME}.
+           We help [audience] with [a few of its capabilities]." Draw on the brief and
+           offerings above. Keep it LIGHT and high-level — a short sentence or two,
+           conversational, like the example opener(s) below.{opener_examples}
            Do NOT open by recapping the prospect's own work, and do NOT diagnose their
-           needs (no "your work suggests you need…").
+           needs (no "your work suggests you need…").{voice_notes}
         2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps
            with that are relevant to their space, expressed as the benefit to them
-           (e.g. faster turnaround, more confidence in results, less compute cost) —
+           (e.g. faster turnaround, more confidence in results, lower cost) —
            illustrative, not prescriptive; one or two light, plausible connections to
            their domain. Do NOT prescribe fixes for their specific product or claim to
            know their internals.
-        3. A simple, low-pressure ask for a short intro call to see whether
-           {profile.NAME} could be useful to them.
+        3. A simple, low-pressure ask for a short next step (e.g. a brief intro call)
+           to see whether {profile.NAME} could be useful to them.
       Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
       Do NOT add a signature, sender name, title, company, or contact details — the
       sender's email client appends their own on send."""

@@ -12,10 +12,25 @@ Marking 'sent' records today as the last-contact date (drives the follow-up time
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 
-from prospectus_agent import config
-from prospectus_agent import db
+
+def _select_profile_early() -> None:
+    """Honor a leading `--profile NAME` before config (which reads the active
+    profile at import) is loaded. $DEFAULT_PROFILE from .env is picked up by config
+    automatically, so this only matters when overriding it on the command line."""
+    argv = sys.argv[1:]
+    if "--profile" in argv:
+        i = argv.index("--profile")
+        if i + 1 < len(argv) and not argv[i + 1].startswith("-"):
+            os.environ["PROSPECTUS_PROFILE"] = argv[i + 1]
+
+
+_select_profile_early()
+
+from prospectus_agent import config  # noqa: E402  (after profile selection)
+from prospectus_agent import db  # noqa: E402
 
 
 def _conn():
@@ -100,6 +115,11 @@ def cmd_drafts(args):
 
 def main():
     p = argparse.ArgumentParser(description="Manual outreach status tracker.")
+    p.add_argument(
+        "--profile", metavar="NAME",
+        help="business profile to act on (default: $DEFAULT_PROFILE). Put it before "
+             "the subcommand, e.g. `prospectus-status --profile reactionstudio drafts`.",
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pl = sub.add_parser("list", help="list companies")

@@ -1,7 +1,7 @@
 [project]
 name = "prospectus-agent"
 version = "0.1.0"
-description = "Daily AI agent that finds prospective Open Numerics clients and drafts tailored outreach emails."
+description = "Daily AI agent that finds prospective clients and drafts tailored outreach emails."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

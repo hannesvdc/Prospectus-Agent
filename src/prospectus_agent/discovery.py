@@ -49,16 +49,16 @@ SUBMIT_CANDIDATES_TOOL = {
                         "industry": {"type": "string"},
                         "why_fit": {
                             "type": "string",
-                            "description": "Why this company plausibly needs ON's services",
+                            "description": f"Why this company plausibly needs {profile.NAME}'s offerings",
                         },
                         "suggested_applications": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "Concrete ON applications tied to this company's actual work",
+                            "description": f"Concrete ways {profile.NAME} could help, tied to this company's actual work",
                         },
                         "fit_score": {
                             "type": "integer",
-                            "description": "Fit for Open Numerics, 0 (none) to 10 (ideal)",
+                            "description": f"Fit for {profile.NAME}, 0 (none) to 10 (ideal)",
                         },
                         "company_size": {
                             "type": "string",
@@ -71,8 +71,8 @@ SUBMIT_CANDIDATES_TOOL = {
                         "is_service_provider": {
                             "type": "boolean",
                             "description": (
-                                "True if the company ITSELF sells simulation / UQ / "
-                                "scientific-ML / HPC services or software (a peer or "
+                                f"True if the company ITSELF sells the same kind of "
+                                f"product or services as {profile.NAME} (a peer or "
                                 "competitor, NOT a potential client)."
                             ),
                         },

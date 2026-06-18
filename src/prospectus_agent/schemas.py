@@ -16,10 +16,10 @@ class Candidate(BaseModel):
     domain: str = Field(description="Primary website domain, e.g. acme.com")
     hq_location: str = Field(default="", description="City, State/Country")
     industry: str = ""
-    why_fit: str = Field(description="Why this company could use Open Numerics")
+    why_fit: str = Field(description="Why this company could use the seller's offerings")
     suggested_applications: List[str] = Field(
         default_factory=list,
-        description="Concrete ON applications for this company's work",
+        description="Concrete ways the seller could help with this company's work",
     )
     fit_score: int = Field(description="0-10 fit score")
     company_size: str = Field(
@@ -32,9 +32,9 @@ class Candidate(BaseModel):
     is_service_provider: bool = Field(
         default=False,
         description=(
-            "True if this company itself SELLS numerical simulation / UQ / "
-            "scientific-ML / HPC services or software (a peer or competitor of "
-            "Open Numerics, not a potential client). Such companies are excluded."
+            "True if this company itself SELLS the same kind of product or services "
+            "as the seller (a peer or competitor, not a potential client). Such "
+            "companies are excluded."
         ),
     )
     source_urls: List[str] = Field(default_factory=list)

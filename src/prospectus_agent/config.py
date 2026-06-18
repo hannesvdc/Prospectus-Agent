@@ -5,38 +5,28 @@ provides typed access plus a single OpenAI client factory.
 
 Filesystem paths (db, outbox, caches, profile) are resolved against a project
 HOME directory rather than the current working directory, so the agent can be
-run from anywhere once installed. See _resolve_home().
+run from anywhere once installed (see paths.HOME).
+
+Multi-business: the active PROFILE (from $PROSPECTUS_PROFILE, set by `--profile`,
+else $DEFAULT_PROFILE in .env) drives per-business path defaults — profile.<p>.yaml,
+<p>.db, outbox/<p>/, <p>_brief_cache.json — so every entry point (daily run, refine,
+status) stays consistent. With no profile set, the legacy single-business defaults
+apply (profile.yaml, prospects.db, outbox/).
 """
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from prospectus_agent.paths import HOME  # resolves home + loads .env on import
+
+# Active business profile name (empty = legacy single-profile mode).
+PROFILE = (os.getenv("PROSPECTUS_PROFILE") or os.getenv("DEFAULT_PROFILE") or "").strip()
 
 
-def _resolve_home() -> Path:
-    """The project home directory — where .env, profile.yaml, the SQLite db and
-    the outbox live. This is what lets the agent run from ANY working directory.
-
-    Resolution order:
-      1. $PROSPECTUS_AGENT_HOME, if set (point this at your project dir).
-      2. The repo root inferred from this file's location (works for an editable
-         `pip install -e .`, where this file stays at <home>/src/prospectus_agent/).
-      3. The current working directory (last resort)."""
-    env_home = os.getenv("PROSPECTUS_AGENT_HOME")
-    if env_home:
-        return Path(env_home).expanduser().resolve()
-    repo_root = Path(__file__).resolve().parents[2]  # <home>/src/prospectus_agent/config.py
-    if (repo_root / ".env").exists() or (repo_root / "profile.yaml").exists() \
-            or (repo_root / "profile.example.yaml").exists():
-        return repo_root
-    return Path.cwd()
-
-
-HOME = _resolve_home()
-# Load .env from the resolved home (not just the CWD) so running from elsewhere works.
-load_dotenv(HOME / ".env")
+def _profiled(legacy: str, template: str) -> str:
+    """Per-business default filename when a PROFILE is active, else the legacy name."""
+    return template.format(p=PROFILE) if PROFILE else legacy
 
 
 def _path(env_name: str, default_name: str) -> str:
@@ -46,6 +36,10 @@ def _path(env_name: str, default_name: str) -> str:
     raw = (os.getenv(env_name) or "").strip()
     p = Path(raw).expanduser() if raw else Path(default_name)
     return str(p if p.is_absolute() else HOME / p)
+
+
+# Path to the active profile YAML (loaded by agent_profile).
+PROFILE_PATH = _path("PROFILE_PATH", _profiled("profile.yaml", "profile.{p}.yaml"))
 
 
 def _int(name: str, default: int) -> int:
@@ -68,12 +62,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
 
 # Cache file for the company brief fetched from the website (see on_profile.py).
 # Company identity / offerings / targeting live in profile.yaml (agent_profile.py).
-BRIEF_CACHE = _path("BRIEF_CACHE", "company_brief_cache.json")
+BRIEF_CACHE = _path("BRIEF_CACHE", _profiled("company_brief_cache.json", "{p}_brief_cache.json"))
 
 # Where the copy-paste draft digests (index.md / index.html) are written. Set
 # OUTBOX_DIR in .env to an absolute path to keep drafts in a fixed location
 # regardless of where you run the agent from.
-OUTBOX_DIR = _path("OUTBOX_DIR", "outbox")
+OUTBOX_DIR = _path("OUTBOX_DIR", _profiled("outbox", "outbox/{p}"))
 
 # --- Pipeline tunables -----------------------------------------------------
 # gpt-5.4-mini is ~6.6x cheaper than gpt-5.5 and plenty for scoring + short email
@@ -101,8 +95,8 @@ MAX_PER_SECTOR = _int("MAX_PER_SECTOR", 2)
 # "aerospace_defense". Avoided-but-qualified companies are kept as backlog, so
 # removing a sector here makes them eligible again.
 AVOID_SECTORS = _list("AVOID_SECTORS")
-# Company-size ceiling. Picks larger than MAX_COMPANY_SIZE are excluded (ON is a
-# boutique consultancy; household-name giants aren't realistic prospects).
+# Company-size ceiling. Picks larger than MAX_COMPANY_SIZE are excluded (a boutique
+# seller's realistic prospects aren't household-name giants).
 COMPANY_SIZE_ORDER = ["startup", "small", "mid", "large", "enterprise"]
 MAX_COMPANY_SIZE = os.getenv("MAX_COMPANY_SIZE", "mid").strip().lower()
 MAX_DISCOVERY_CALLS = _int("MAX_DISCOVERY_CALLS", 2)
@@ -110,7 +104,7 @@ MAX_DISCOVERY_CALLS = _int("MAX_DISCOVERY_CALLS", 2)
 # Cap how many already-seen companies are sent as a "don't repeat" hint. The DB
 # filter still guarantees no duplicates; this keeps input from growing unbounded.
 DENY_LIST_LIMIT = _int("DENY_LIST_LIMIT", 150)
-# Re-fetch the ON profile from the web at most every N days (cached otherwise).
+# Re-fetch the seller's profile from the web at most every N days (cached otherwise).
 PROFILE_REFRESH_DAYS = _int("PROFILE_REFRESH_DAYS", 7)
 
 # Contact list size per company: one generic inbox + a few senior people.
@@ -118,7 +112,7 @@ MAX_PUBLIC_EMAILS = _int("MAX_PUBLIC_EMAILS", 1)      # generic inboxes (info@/c
 MAX_PEOPLE = _int("MAX_PEOPLE", 3)                    # named senior people
 GUESSES_PER_PERSON = _int("GUESSES_PER_PERSON", 1)    # guessed addresses per person
 FOLLOWUP_BUSINESS_DAYS = _int("FOLLOWUP_BUSINESS_DAYS", 5)
-DB_PATH = _path("DB_PATH", "prospects.db")
+DB_PATH = _path("DB_PATH", _profiled("prospects.db", "{p}.db"))
 
 
 def size_rank(size: str) -> int:

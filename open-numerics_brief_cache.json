@@ -1,0 +1,4 @@
+{
+  "date": "2026-06-12",
+  "profile": "Open Numerics is a boutique scientific-computing consultancy that both advises and builds. It helps R&D and engineering teams decide what to model, what to accelerate, where uncertainty affects decisions, whether to use ML or numerical simulation, and how to plan simulation/AI roadmaps. Its work spans PDE-based modeling and simulation, custom solvers, finite elements and finite volumes, scientific machine learning, uncertainty quantification and Bayesian inference, surrogate/foundation models, GPU/CUDA acceleration, HPC/parallel workflows, and deployment as APIs, digital twins, or containerized services. It serves computational problems in biotech, pharma, energy, aerospace, and engineering settings, especially simulation-heavy and uncertainty-sensitive workloads. ([opennumerics.com](https://opennumerics.com/))"
+}

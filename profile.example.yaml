@@ -24,6 +24,30 @@ company:
       difference, then build the software and workflows to put those decisions
       into practice. That can include custom solvers, surrogate models, GPU/HPC
       workflows, and uncertainty-aware analysis tools.
+  # Capability/feature areas named in the email SUBJECT line (short phrases). The
+  # subject is framed around what YOU do, never a guess at the prospect's use cases.
+  # Omit to let the model phrase the subject from the brief.
+  capability_areas:
+    - simulation
+    - scientific ML/AI
+    - uncertainty quantification
+    - HPC/GPU acceleration
+    - computational advisory
+  # Business-specific framing dos/don'ts for the email body. This is where your
+  # messaging lives (how to describe what you do, words to avoid) — the engine code
+  # is otherwise business-agnostic. Each note is an instruction to the drafter.
+  # Omit entirely to let the model write unguided from the brief + offerings.
+  voice_notes:
+    - >
+      Convey that Open Numerics works at two levels: it advises on where modeling,
+      simulation, ML, or acceleration can make the biggest difference, and then it
+      builds the software and workflows itself. Keep this light.
+    - >
+      Phrase the build side as "then we build the tools" — never use stiff role-nouns
+      like "implementers". Never read as advising the client to build it themselves.
+    - >
+      Never say "decide what to model" / "what to model" (condescending); "decide
+      where [techniques] can make the biggest difference" is the right framing.
   # Fallback description, used only if the website can't be fetched.
   description: >
     Open Numerics provides specialist scientific-computing services: numerical

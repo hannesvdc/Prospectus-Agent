@@ -3,7 +3,7 @@
 Two patterns are used across the project:
 
 1. run_text()        — let the model use the hosted web_search tool and return
-                       its final prose. Used for the ON profile refresh.
+                       its final prose. Used for the seller-profile refresh.
 
 2. run_with_submit() — let the model use web_search, then hand back structured
                        data by calling a strict custom "submit" function tool.

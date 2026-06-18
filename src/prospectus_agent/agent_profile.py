@@ -10,17 +10,15 @@ to profile.example.yaml so a fresh clone still runs.
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import yaml
 
 from prospectus_agent import config
 
-# PROFILE_PATH (absolute or relative) overrides the default; relative values and
-# the defaults resolve against the project HOME, so the agent runs from anywhere.
-_raw = (os.getenv("PROFILE_PATH") or "").strip()
-_p = Path(_raw).expanduser() if _raw else Path("profile.yaml")
-_PATH = str(_p if _p.is_absolute() else config.HOME / _p)
+# config resolves the active profile path (honoring $PROFILE_PATH, the --profile
+# flag via $PROSPECTUS_PROFILE, and $DEFAULT_PROFILE). Falls back to the committed
+# example so a fresh clone still runs.
+_PATH = config.PROFILE_PATH
 _FALLBACK = str(config.HOME / "profile.example.yaml")
 
 
@@ -62,6 +60,15 @@ CREDIBILITY = _clean(_company.get("credibility", ""))  # optional trust line for
 # drafter adapts (not copies) to anchor tone/structure. List of strings; each is
 # collapsed to a single tidy block. Empty list if unset.
 EXAMPLE_OPENERS = [_clean(o) for o in (_company.get("example_openers") or []) if str(o).strip()]
+
+# Optional capability/feature areas named in the email SUBJECT line (kept generic;
+# the prospect's own use cases are never guessed). List of short phrases.
+CAPABILITY_AREAS = [str(a).strip() for a in (_company.get("capability_areas") or []) if str(a).strip()]
+
+# Optional business-specific voice notes — framing dos/don'ts injected into the
+# email-body prompt (how to describe what you do, words to avoid, etc.). This is
+# where seller-specific messaging lives so the engine itself stays generic.
+VOICE_NOTES = [_clean(n) for n in (_company.get("voice_notes") or []) if str(n).strip()]
 
 # --- targeting -------------------------------------------------------------
 IDEAL_CUSTOMER = _clean(_req(_targeting, "targeting", "ideal_customer"))

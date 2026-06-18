@@ -1,7 +1,7 @@
 """Daily pipeline for the prospecting agent (invoked by `prospectus-agent`).
 
 Pipeline:
-  1. Refresh ON's own profile from opennumerics.com (cached per day).
+  1. Refresh the seller's own profile from its website (cached per day).
   2. Discover up to TARGET_COMPANY_COUNT new qualifying companies (<=
      MAX_DISCOVERY_CALLS web-search rounds).
   3. Research each winner and draft a tailored initial email; store contacts.
