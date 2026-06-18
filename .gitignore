@@ -225,6 +225,8 @@ __marimo__/
 prospects.db
 prospects.backup-*.db
 *.db
+# Generated caches (per-profile website brief, legacy/orphan caches) — never commit
+*_cache.json
 company_brief_cache.json
 outbox/
 profile.yaml
