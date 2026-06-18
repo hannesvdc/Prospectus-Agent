@@ -63,6 +63,23 @@ files somewhere else, point `PROSPECTUS_AGENT_HOME` at that folder.
 > one small Python module per step. Only touch it to change the wording or tone of
 > what the agent asks the model.
 
+### Running more than one business
+
+One install can serve several businesses, each fully isolated. A profile named
+`acme` lives in **`profile.acme.yaml`** and gets its own database (`acme.db`),
+outbox (`outbox/acme/`), and website-brief cache — so leads, status, and drafts
+never mix between businesses:
+
+```bash
+prospectus-agent --profile acme           # discover + draft for "acme"
+prospectus-status --profile acme drafts   # review acme's drafts
+```
+
+Set **`DEFAULT_PROFILE=acme`** in `.env` to make the bare `prospectus-agent`
+(no `--profile`) use that profile by default. The email *voice* is per-profile too —
+each `profile.*.yaml` carries its own `capability_areas`, `voice_notes`,
+`credibility`, and opener examples, so the engine itself stays business-agnostic.
+
 ## How it works
 
 `prospectus-agent` runs the pipeline:
@@ -70,7 +87,7 @@ files somewhere else, point `PROSPECTUS_AGENT_HOME` at that folder.
 1. **Refresh profile** — fetches your company's website (cached; default weekly via
    `PROFILE_REFRESH_DAYS`) so drafts reflect what you currently do.
 2. **Discover** — up to `MAX_DISCOVERY_CALLS` web-search rounds (default 2) to find
-   up to `TARGET_COMPANY_COUNT` companies (default 3) scoring ≥ `FIT_SCORE_THRESHOLD`/10,
+   up to `TARGET_COMPANY_COUNT` companies (default 5) scoring ≥ `FIT_SCORE_THRESHOLD`/10,
    rotating the industry angle each round (with a per-day offset) and skipping
    anything already in the DB. A **diversifier** caps how many picks share one sector
    (`MAX_PER_SECTOR`, default 2) so a single sector can't take over the list;
@@ -81,10 +98,11 @@ files somewhere else, point `PROSPECTUS_AGENT_HOME` at that folder.
 4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
    and drafts a gentle nudge.
 5. Writes `outbox/<date>/index.md` plus a rich `index.html` — each email with its
-   contact list, ready to copy-paste. The HTML version turns every "Open Numerics"
-   mention into a real link, so pasting from a browser into Gmail keeps the hyperlinks.
-   Running again the same day **appends** the new drafts rather than overwriting, so
-   earlier drafts (and any notes you added) are kept.
+   contact list and a copyable comma-separated **To:** line, ready to paste. The HTML
+   version turns every mention of your company's name into a real link, so pasting
+   from a browser into Gmail keeps the hyperlinks. Running again the same day
+   **appends** the new drafts rather than overwriting, so earlier drafts (and any
+   notes you added) are kept.
 6. Prints a digest and a token-usage line so you can see what the run cost.
 
 After tuning the email wording, `prospectus-agent --refine` rewrites **today's**
@@ -106,6 +124,7 @@ knobs live here (gitignored):
 | Variable | Purpose |
 |---|---|
 | `OPENAI_API_KEY` | Your OpenAI API key (platform.openai.com) |
+| `DEFAULT_PROFILE` | Business to run when no `--profile` is given (loads `profile.<name>.yaml` + `<name>.db` + `outbox/<name>/`). Omit to use the plain `profile.yaml` / `prospects.db` defaults. |
 | `OPENAI_MODEL` | Model id (default `gpt-5.4-mini` — cheap; `gpt-5.4` / `gpt-5.5` cost ~2× / ~6.6× more) |
 | `FIT_SCORE_THRESHOLD`, `TARGET_COMPANY_COUNT`, `MAX_DISCOVERY_CALLS`, `FOLLOWUP_BUSINESS_DAYS` | Pipeline tunables |
 | `MAX_PER_SECTOR` | Max picks from one sector per day (diversifier; default 2) |
@@ -122,6 +141,7 @@ knobs live here (gitignored):
 ```bash
 prospectus-agent                    # find prospects + draft emails
 prospectus-agent --refine           # re-draft today's emails with the latest prompt
+prospectus-agent --profile acme     # run a different business (profile.acme.yaml)
 
 prospectus-status drafts            # list drafts ready to review
 prospectus-status show DOMAIN       # see the full draft + contacts
@@ -148,8 +168,9 @@ Reply tracking is fully manual — the agent never reads your inbox.
   usage summary at the end of each run is there so you notice early.
 - **Read before you send.** It's good, not infallible — it's writing about companies
   it researched in seconds. Skim each draft. That's the whole point of "it never sends."
-- **It's single-user and local** (one SQLite file, one inbox). A hosted, multi-tenant
-  version is a someday-maybe, not a today.
+- **It's single-user and local** (a SQLite file per business, your own inbox). It can
+  run several businesses side by side via profiles, but a *hosted, multi-tenant*
+  version (many users) is a someday-maybe, not a today.
 
 ## The code
 
@@ -163,9 +184,10 @@ in `profile.yaml` (at the project root) and `prompts/`.
 | `daily_run.py` | Pipeline implementation |
 | `refine.py` / `redraft.py` | Re-draft today's emails with the current prompt (no re-research) + its engine |
 | `status.py` | Manual status CLI (`prospectus-status`) |
-| `agent_profile.py` | Loader for `profile.yaml` (your business + ICP — the thing you edit) |
+| `agent_profile.py` | Loader for the active `profile.*.yaml` (your business + ICP — the thing you edit) |
 | `prompts/` | Prompt templates, one module per step — edit to change wording/tone |
-| `config.py` | Loads `.env`, resolves the project home + paths, OpenAI client |
+| `paths.py` | Resolves the project home + loads `.env` (before config computes paths) |
+| `config.py` | `.env` tunables, per-profile path resolution, OpenAI client |
 | `db.py` | SQLite layer (companies, contacts, emails) |
 | `llm.py` | OpenAI Responses API helpers (web_search + strict tool extraction) |
 | `on_profile.py` | Company website-brief refresh (cached) |
