@@ -97,8 +97,8 @@ def main() -> int:
     written = outbox.generate(conn, since_email_id=emails_before)
     if written:
         out_dir, n = written
-        print(f"\n✉  Wrote {n} draft(s) to {out_dir}/ (index.md + index.html) — "
-              "recipients + subject + body, ready to copy-paste.")
+        print(f"\n✉  Wrote {n} draft(s) to {out_dir}/ (new_prospects.md / followups.md "
+              "+ .html) — recipients + subject + body, ready to copy-paste.")
 
     usage = llm.usage_summary()
     if usage:

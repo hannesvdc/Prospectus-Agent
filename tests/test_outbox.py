@@ -31,7 +31,7 @@ def test_generate_writes_index(conn, tmp_path):
     out_dir, count = result
     assert count == 1
 
-    index = (tmp_path / today / "index.md").read_text()
+    index = (tmp_path / today / "new_prospects.md").read_text()
     assert "Acme (acme.com)" in index
     assert "Crash sim for your EVs" in index
     assert "We can help." in index
@@ -58,7 +58,7 @@ def test_generate_writes_html_with_hyperlink(conn, tmp_path):
     today = date.today().isoformat()
     outbox.generate(conn, out_root=str(tmp_path), today=today)
 
-    html = (tmp_path / today / "index.html").read_text()
+    html = (tmp_path / today / "new_prospects.html").read_text()
     # EVERY body mention of the seller's name is hyperlinked for Gmail paste.
     anchor = f'<a href="{agent_profile.WEBSITE}">{agent_profile.NAME}</a>'
     assert html.count(anchor) == 2
@@ -71,10 +71,10 @@ def test_copyable_recipient_line(conn, tmp_path):
     today = date.today().isoformat()
     outbox.generate(conn, out_root=str(tmp_path), today=today)
 
-    index = (tmp_path / today / "index.md").read_text()
+    index = (tmp_path / today / "new_prospects.md").read_text()
     assert "**To (copy):** `info@acme.com, jane.doe@acme.com`" in index
 
-    html = (tmp_path / today / "index.html").read_text()
+    html = (tmp_path / today / "new_prospects.html").read_text()
     assert "<code>info@acme.com, jane.doe@acme.com</code>" in html
 
 
@@ -82,17 +82,32 @@ def test_guessed_only_warns(conn, tmp_path):
     _seed(conn, with_public=False)
     today = date.today().isoformat()
     outbox.generate(conn, out_root=str(tmp_path), today=today)
-    index = (tmp_path / today / "index.md").read_text()
+    index = (tmp_path / today / "new_prospects.md").read_text()
     assert "jane.doe@acme.com" in index
     assert "verify before sending" in index
 
 
-def test_followups_labelled(conn, tmp_path):
+def test_followups_go_to_their_own_file(conn, tmp_path):
     _seed(conn, etype="followup")
     today = date.today().isoformat()
     outbox.generate(conn, out_root=str(tmp_path), today=today)
-    index = (tmp_path / today / "index.md").read_text()
-    assert "(follow-up)" in index
+    # Follow-ups land in followups.md, not new_prospects.md.
+    followups = (tmp_path / today / "followups.md").read_text()
+    assert "Acme (acme.com)" in followups and "(follow-up)" in followups
+    assert not (tmp_path / today / "new_prospects.md").exists()
+
+
+def test_mixed_run_splits_into_two_files(conn, tmp_path):
+    today = date.today().isoformat()
+    _seed(conn, domain="new.com", etype="initial")
+    _seed(conn, domain="old.com", etype="followup")
+    out_dir, count = outbox.generate(conn, out_root=str(tmp_path), today=today)
+    assert count == 2
+
+    prospects = (tmp_path / today / "new_prospects.md").read_text()
+    followups = (tmp_path / today / "followups.md").read_text()
+    assert "new.com" in prospects and "old.com" not in prospects
+    assert "old.com" in followups and "new.com" not in followups
 
 
 def test_second_run_same_day_appends(conn, tmp_path):
@@ -109,9 +124,9 @@ def test_second_run_same_day_appends(conn, tmp_path):
     result = outbox.generate(conn, out_root=str(tmp_path), today=today, since_email_id=before2)
     assert result == (str(tmp_path / today), 1)  # only B written this run
 
-    index = (tmp_path / today / "index.md").read_text()
+    index = (tmp_path / today / "new_prospects.md").read_text()
     assert "a.com" in index and "b.com" in index          # augmented, not replaced
-    assert index.count("# Outreach drafts") == 1           # header not duplicated
+    assert index.count("# New prospect drafts") == 1       # header not duplicated
 
 
 def test_overwrite_regenerates_fresh(conn, tmp_path):
@@ -124,10 +139,10 @@ def test_overwrite_regenerates_fresh(conn, tmp_path):
     db.update_email(conn, eid, subject="Refined subject", body="Refined body text")
     outbox.generate(conn, out_root=str(tmp_path), today=today, overwrite=True)
 
-    index = (tmp_path / today / "index.md").read_text()
+    index = (tmp_path / today / "new_prospects.md").read_text()
     assert "Refined subject" in index
     assert "Crash sim for your EVs" not in index        # old content gone
-    assert index.count("# Outreach drafts") == 1        # single fresh header
+    assert index.count("# New prospect drafts") == 1    # single fresh header
 
 
 def test_nothing_drafted_returns_none(conn, tmp_path):

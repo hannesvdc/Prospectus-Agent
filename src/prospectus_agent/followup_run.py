@@ -50,7 +50,7 @@ def main() -> int:
     written = outbox.generate(conn, since_email_id=emails_before)
     if written:
         out_dir, n = written
-        print(f"\n✉  Wrote {n} follow-up draft(s) to {out_dir}/ (index.md + index.html).")
+        print(f"\n✉  Wrote {n} follow-up draft(s) to {out_dir}/ (followups.md + .html).")
 
     usage = llm.usage_summary()
     if usage:

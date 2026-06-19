@@ -48,7 +48,7 @@ def main() -> int:
         written = outbox.generate(conn, overwrite=True)
         if written:
             out_dir, n = written
-            print(f"\n✉  Regenerated {n} draft(s) in {out_dir}/ (index.md + index.html).")
+            print(f"\n✉  Regenerated {n} draft(s) in {out_dir}/ (new_prospects.md + .html).")
     else:
         print("\nNothing refined — outbox left unchanged.")
 

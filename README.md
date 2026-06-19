@@ -97,7 +97,8 @@ each `profile.*.yaml` carries its own `capability_areas`, `voice_notes`,
    The draft has **no sign-off/signature** — your mail client adds yours on send.
 4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
    and drafts a gentle nudge.
-5. Writes `outbox/<date>/index.md` plus a rich `index.html` — each email with its
+5. Writes `outbox/<date>/`, splitting **new prospect emails** (`new_prospects.md` /
+   `.html`) from **follow-ups** (`followups.md` / `.html`) — each email with its
    contact list and a copyable comma-separated **To:** line, ready to paste. The HTML
    version turns every mention of your company's name into a real link, so pasting
    from a browser into Gmail keeps the hyperlinks. Running again the same day
@@ -201,7 +202,7 @@ in `profile.yaml` (at the project root) and `prompts/`.
 | `drafting.py` | Follow-up drafting |
 | `contacts.py` | Email-pattern guessing |
 | `followups.py` | Business-day follow-up sweep |
-| `outbox.py` | Writes the copy-paste `index.md` + hyperlinked `index.html` digests of drafts |
+| `outbox.py` | Writes the copy-paste digests — `new_prospects.{md,html}` + `followups.{md,html}` |
 | `schemas.py` | Pydantic validation models |
 
 ## Tests

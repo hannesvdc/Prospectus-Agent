@@ -1,16 +1,17 @@
 """Write a ready-to-review digest of the drafts after a run.
 
-Produces two files per run under `outbox/<date>/`:
-  * `index.md`   — markdown digest (recipients + subject + body in a code block),
-                   easy to skim and copy as plain text.
-  * `index.html` — the same drafts as rich HTML. The body has the seller's name
-                   turned into a real <a href> link to its website, so when you
-                   copy the body from a browser and paste into Gmail the hyperlink
-                   is preserved (Gmail keeps links only on rich-text paste, not on
-                   markdown). Open this file in a browser to copy from.
+Under `outbox/<date>/`, new prospect emails and follow-ups are written to separate
+files, each as a markdown + HTML pair:
+  * `new_prospects.md` / `new_prospects.html` — initial outreach drafts.
+  * `followups.md`     / `followups.html`     — follow-up drafts.
 
-Running the agent again on the same day **appends** that run's new drafts to both
-files rather than overwriting them, so earlier drafts (and notes you added) survive.
+The `.md` is easy to skim and copy as plain text; the `.html` renders the body as
+rich HTML with the seller's name turned into a real <a href> link, so copying the
+body from a browser and pasting into Gmail preserves the hyperlink (Gmail keeps links
+only on rich-text paste, not markdown). Open the `.html` in a browser to copy from.
+
+Running the agent again on the same day **appends** that run's new drafts rather than
+overwriting them, so earlier drafts (and notes you added) survive.
 
 Recipients: public addresses are listed first, then pattern-guessed ones (tagged),
 so you choose whom to include.
@@ -138,9 +139,43 @@ def _email_block_html(conn, em) -> str | None:
     return "\n".join(parts)
 
 
+# Which email type goes to which file pair: (basename, human title).
+_GROUPS = [
+    ("initial", "new_prospects", "New prospect drafts"),
+    ("followup", "followups", "Follow-up drafts"),
+]
+
+
+def _write_group(conn, out_dir, today, basename, title, emails, overwrite) -> int:
+    """Write one email-type's drafts to <basename>.md + <basename>.html (append by
+    default, overwrite if asked). Returns the number of blocks written."""
+    md_blocks = [b for b in (_email_block(conn, em) for em in emails) if b]
+    if not md_blocks:
+        return 0
+    html_blocks = [b for b in (_email_block_html(conn, em) for em in emails) if b]
+
+    md_path = os.path.join(out_dir, f"{basename}.md")
+    md_fresh = overwrite or not os.path.exists(md_path)
+    with open(md_path, "w" if md_fresh else "a") as f:
+        if md_fresh:
+            f.write(f"# {title} — {today}\n\n")
+        f.write("\n".join(md_blocks) + "\n")
+
+    html_path = os.path.join(out_dir, f"{basename}.html")
+    html_fresh = overwrite or not os.path.exists(html_path)
+    with open(html_path, "w" if html_fresh else "a") as f:
+        if html_fresh:
+            f.write(f'<!DOCTYPE html>\n<html><head><meta charset="utf-8">\n'
+                    f"<title>{title} — {today}</title></head>\n<body>\n"
+                    f"<h1>{title} — {today}</h1>\n")
+        f.write("\n".join(html_blocks) + "\n")
+    return len(md_blocks)
+
+
 def generate(conn, *, out_root: str | None = None, today: str | None = None,
              since_email_id: int | None = None, overwrite: bool = False):
-    """Write today's drafts to <out_root>/<date>/index.md and index.html.
+    """Write today's drafts under <out_root>/<date>/, splitting new prospect emails
+    (new_prospects.md/.html) from follow-ups (followups.md/.html).
 
     By default APPENDS if the files already exist (so re-running the same day
     augments them); with `since_email_id`, only emails newer than that id are
@@ -152,28 +187,15 @@ def generate(conn, *, out_root: str | None = None, today: str | None = None,
     emails = db.emails_on(conn, today)
     if since_email_id is not None and not overwrite:
         emails = [e for e in emails if e["id"] > since_email_id]
-    blocks = [b for b in (_email_block(conn, em) for em in emails) if b]
-    if not blocks:
+    if not emails:
         return None
-    html_blocks = [b for b in (_email_block_html(conn, em) for em in emails) if b]
 
     out_dir = os.path.join(out_root, today)
     os.makedirs(out_dir, exist_ok=True)
 
-    md_path = os.path.join(out_dir, "index.md")
-    md_fresh = overwrite or not os.path.exists(md_path)
-    with open(md_path, "w" if md_fresh else "a") as f:
-        if md_fresh:
-            f.write(f"# Outreach drafts — {today}\n\n")
-        f.write("\n".join(blocks) + "\n")
+    total = 0
+    for email_type, basename, title in _GROUPS:
+        group = [e for e in emails if e["type"] == email_type]
+        total += _write_group(conn, out_dir, today, basename, title, group, overwrite)
 
-    html_path = os.path.join(out_dir, "index.html")
-    html_fresh = overwrite or not os.path.exists(html_path)
-    with open(html_path, "w" if html_fresh else "a") as f:
-        if html_fresh:
-            f.write(f'<!DOCTYPE html>\n<html><head><meta charset="utf-8">\n'
-                    f"<title>Outreach drafts — {today}</title></head>\n<body>\n"
-                    f"<h1>Outreach drafts — {today}</h1>\n")
-        f.write("\n".join(html_blocks) + "\n")
-
-    return out_dir, len(blocks)
+    return (out_dir, total) if total else None
