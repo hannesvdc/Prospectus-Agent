@@ -141,6 +141,8 @@ knobs live here (gitignored):
 ```bash
 prospectus-agent                    # find prospects + draft emails
 prospectus-agent --refine           # re-draft today's emails with the latest prompt
+prospectus-agent --sent             # record that you sent the drafts (starts follow-up clock)
+prospectus-agent --followup         # draft follow-ups for anyone past the no-reply threshold
 prospectus-agent --profile acme     # run a different business (profile.acme.yaml)
 
 prospectus-status drafts            # list drafts ready to review
@@ -183,6 +185,8 @@ in `profile.yaml` (at the project root) and `prompts/`.
 | `cli.py` | `prospectus-agent` entrypoint (daily run / `--refine`) |
 | `daily_run.py` | Pipeline implementation |
 | `refine.py` / `redraft.py` | Re-draft today's emails with the current prompt (no re-research) + its engine |
+| `mark_sent.py` | `--sent`: mark drafted emails as sent so the follow-up clock starts |
+| `followup_run.py` | `--followup`: standalone follow-up sweep (list + draft) |
 | `status.py` | Manual status CLI (`prospectus-status`) |
 | `agent_profile.py` | Loader for the active `profile.*.yaml` (your business + ICP — the thing you edit) |
 | `prompts/` | Prompt templates, one module per step — edit to change wording/tone |

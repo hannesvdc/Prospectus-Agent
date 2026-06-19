@@ -34,6 +34,24 @@ def test_refine_flag_runs_refine(monkeypatch):
     assert calls == ["refine"]
 
 
+def test_sent_flag_runs_mark_sent(monkeypatch):
+    _isolate_env(monkeypatch)
+    calls = []
+    monkeypatch.setattr("prospectus_agent.daily_run.main", lambda: calls.append("daily") or 0)
+    monkeypatch.setattr("prospectus_agent.mark_sent.main", lambda: calls.append("sent") or 0)
+    assert cli.main(["--sent"]) == 0
+    assert calls == ["sent"]
+
+
+def test_followup_flag_runs_followup(monkeypatch):
+    _isolate_env(monkeypatch)
+    calls = []
+    monkeypatch.setattr("prospectus_agent.daily_run.main", lambda: calls.append("daily") or 0)
+    monkeypatch.setattr("prospectus_agent.followup_run.main", lambda: calls.append("followup") or 0)
+    assert cli.main(["--followup"]) == 0
+    assert calls == ["followup"]
+
+
 def test_exit_code_is_propagated(monkeypatch):
     _isolate_env(monkeypatch)
     monkeypatch.setattr("prospectus_agent.daily_run.main", lambda: 3)

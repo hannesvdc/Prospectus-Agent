@@ -39,6 +39,20 @@ def build_parser() -> argparse.ArgumentParser:
              "(no new discovery or web research), then regenerate the outbox.",
     )
     parser.add_argument(
+        "--sent",
+        action="store_true",
+        help="Record that you've sent the drafted emails: mark all 'drafted' "
+             "companies as 'sent' (contact date = their draft date) so the "
+             "follow-up clock starts. No drafting or web research.",
+    )
+    parser.add_argument(
+        "--followup",
+        action="store_true",
+        help="Follow-up sweep only: list companies past the no-reply threshold, "
+             "draft a follow-up for each, and write them to the outbox. No new "
+             "discovery.",
+    )
+    parser.add_argument(
         "--profile",
         metavar="NAME",
         help="Run a different business: loads profile.NAME.yaml, NAME.db, "
@@ -84,6 +98,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     profile = args.profile or os.getenv("DEFAULT_PROFILE")
     if profile:
         _apply_profile(profile, paths.HOME)
+
+    if args.sent:
+        from prospectus_agent import mark_sent
+        return mark_sent.main()
+
+    if args.followup:
+        from prospectus_agent import followup_run
+        return followup_run.main()
 
     if args.refine:
         from prospectus_agent import refine

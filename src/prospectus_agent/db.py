@@ -171,15 +171,20 @@ def set_status(
     status: str,
     *,
     set_contact_date: bool = False,
+    contact_date: str | None = None,
 ) -> bool:
+    """Update a company's status. Optionally set its last_contact_date: pass an
+    explicit `contact_date` (ISO string — e.g. the real send date), or
+    set_contact_date=True to use today. `contact_date` takes precedence."""
     if status not in VALID_STATUSES:
         raise ValueError(f"Invalid status '{status}'. Valid: {sorted(VALID_STATUSES)}")
     domain = normalize_domain(domain)
     today = date.today().isoformat()
-    if set_contact_date:
+    cd = contact_date or (today if set_contact_date else None)
+    if cd is not None:
         cur = conn.execute(
             "UPDATE companies SET status=?, last_contact_date=?, updated_at=? WHERE domain=?",
-            (status, today, today, domain),
+            (status, cd, today, domain),
         )
     else:
         cur = conn.execute(
