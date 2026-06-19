@@ -16,27 +16,21 @@ import sys
 from datetime import date
 
 from prospectus_agent import agent_profile
-from prospectus_agent import config
-from prospectus_agent import db
 from prospectus_agent import llm
 from prospectus_agent import on_profile
 from prospectus_agent import outbox
 from prospectus_agent import redraft
+from prospectus_agent import runner
 
 
 def main() -> int:
     print(f"{agent_profile.NAME} — refine today's drafts ({date.today().isoformat()})\n")
 
     try:
-        config.require_api_key()
+        client, conn = runner.open_session()
     except RuntimeError as e:
         print(f"ERROR: {e}")
         return 1
-
-    client = config.get_client()
-    conn = db.connect(config.DB_PATH)
-    db.init_db(conn)
-    llm.reset_usage()
 
     # Cached profile brief — no new web call unless the daily cache is stale.
     profile_brief = on_profile.refresh_profile(client)
@@ -58,13 +52,9 @@ def main() -> int:
     else:
         print("\nNothing refined — outbox left unchanged.")
 
-    u = llm.get_usage()
-    if u["calls"]:
-        print(
-            f"\nToken usage: {u['calls']} API call(s) — "
-            f"input {u['input']:,} (cached {u['cached']:,}), "
-            f"output {u['output']:,} (reasoning {u['reasoning']:,})."
-        )
+    usage = llm.usage_summary()
+    if usage:
+        print(f"\n{usage}")
 
     conn.close()
     return 0

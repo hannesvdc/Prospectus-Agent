@@ -23,85 +23,65 @@ from prospectus_agent import agent_profile as profile
 from prospectus_agent import config
 from prospectus_agent import db
 from prospectus_agent import sectors
-from prospectus_agent.llm import WEB_SEARCH_TOOL, run_with_submit
+from prospectus_agent.llm import WEB_SEARCH_TOOL, function_tool, run_with_submit
 from prospectus_agent.prompts import discovery as discovery_prompts
 from prospectus_agent.schemas import Candidate, DiscoveryResult
 
-SUBMIT_CANDIDATES_TOOL = {
-    "type": "function",
-    "name": "submit_candidates",
-    "description": "Submit the prospect companies you found, with fit scores.",
-    "strict": True,
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "candidates": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string"},
-                        "domain": {
-                            "type": "string",
-                            "description": "Primary website domain, e.g. acme.com",
-                        },
-                        "hq_location": {"type": "string"},
-                        "industry": {"type": "string"},
-                        "why_fit": {
-                            "type": "string",
-                            "description": f"Why this company plausibly needs {profile.NAME}'s offerings",
-                        },
-                        "suggested_applications": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": f"Concrete ways {profile.NAME} could help, tied to this company's actual work",
-                        },
-                        "fit_score": {
-                            "type": "integer",
-                            "description": f"Fit for {profile.NAME}, 0 (none) to 10 (ideal)",
-                        },
-                        "company_size": {
-                            "type": "string",
-                            "enum": ["startup", "small", "mid", "large", "enterprise"],
-                            "description": (
-                                "Approximate headcount: startup (<50), small (50-200), "
-                                "mid (200-1000), large (1000-10000), enterprise (10000+)."
-                            ),
-                        },
-                        "is_service_provider": {
-                            "type": "boolean",
-                            "description": (
-                                f"True if the company ITSELF sells the same kind of "
-                                f"product or services as {profile.NAME} (a peer or "
-                                "competitor, NOT a potential client)."
-                            ),
-                        },
-                        "source_urls": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "URLs that back up your assessment",
-                        },
-                    },
-                    "required": [
-                        "name",
-                        "domain",
-                        "hq_location",
-                        "industry",
-                        "why_fit",
-                        "suggested_applications",
-                        "fit_score",
-                        "company_size",
-                        "is_service_provider",
-                        "source_urls",
-                    ],
-                    "additionalProperties": False,
-                },
-            }
+_CANDIDATE_ITEM = {
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "domain": {"type": "string", "description": "Primary website domain, e.g. acme.com"},
+        "hq_location": {"type": "string"},
+        "industry": {"type": "string"},
+        "why_fit": {
+            "type": "string",
+            "description": f"Why this company plausibly needs {profile.NAME}'s offerings",
         },
-        "required": ["candidates"],
-        "additionalProperties": False,
+        "suggested_applications": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": f"Concrete ways {profile.NAME} could help, tied to this company's actual work",
+        },
+        "fit_score": {
+            "type": "integer",
+            "description": f"Fit for {profile.NAME}, 0 (none) to 10 (ideal)",
+        },
+        "company_size": {
+            "type": "string",
+            "enum": ["startup", "small", "mid", "large", "enterprise"],
+            "description": (
+                "Approximate headcount: startup (<50), small (50-200), "
+                "mid (200-1000), large (1000-10000), enterprise (10000+)."
+            ),
+        },
+        "is_service_provider": {
+            "type": "boolean",
+            "description": (
+                f"True if the company ITSELF sells the same kind of product or "
+                f"services as {profile.NAME} (a peer or competitor, NOT a potential client)."
+            ),
+        },
+        "source_urls": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "URLs that back up your assessment",
+        },
     },
+    "required": [
+        "name", "domain", "hq_location", "industry", "why_fit",
+        "suggested_applications", "fit_score", "company_size",
+        "is_service_provider", "source_urls",
+    ],
+    "additionalProperties": False,
 }
+
+SUBMIT_CANDIDATES_TOOL = function_tool(
+    "submit_candidates",
+    "Submit the prospect companies you found, with fit scores.",
+    {"candidates": {"type": "array", "items": _CANDIDATE_ITEM}},
+    ["candidates"],
+)
 
 def _row_to_candidate(row) -> Candidate:
     """Reconstruct a Candidate from a stored backlog row."""

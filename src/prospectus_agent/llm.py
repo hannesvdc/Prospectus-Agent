@@ -30,6 +30,24 @@ from prospectus_agent import config
 # is pulled into context (low|medium|high) — the main per-call token lever.
 WEB_SEARCH_TOOL = {"type": "web_search", "search_context_size": config.SEARCH_CONTEXT_SIZE}
 
+
+def function_tool(name: str, description: str, properties: dict, required: list[str]) -> dict:
+    """Build a strict custom function-tool definition for the Responses API. `strict`
+    + additionalProperties:false guarantee the model returns schema-valid JSON."""
+    return {
+        "type": "function",
+        "name": name,
+        "description": description,
+        "strict": True,
+        "parameters": {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+            "additionalProperties": False,
+        },
+    }
+
+
 # --- usage accounting ------------------------------------------------------
 _USAGE = {"calls": 0, "input": 0, "output": 0, "cached": 0, "reasoning": 0}
 
@@ -41,6 +59,19 @@ def reset_usage() -> None:
 
 def get_usage() -> dict:
     return dict(_USAGE)
+
+
+def usage_summary() -> str | None:
+    """One-line token-usage report for the run, or None if no API calls were made.
+    Shared by the run commands so they report cost identically."""
+    u = _USAGE
+    if not u["calls"]:
+        return None
+    return (
+        f"Token usage: {u['calls']} API call(s) — "
+        f"input {u['input']:,} (cached {u['cached']:,}), "
+        f"output {u['output']:,} (reasoning {u['reasoning']:,})."
+    )
 
 
 def record_usage(response) -> None:

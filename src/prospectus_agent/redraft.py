@@ -11,30 +11,24 @@ without re-discovering or re-researching anything.
 """
 from __future__ import annotations
 
+from datetime import date
+
 from prospectus_agent import config
 from prospectus_agent import db
-from prospectus_agent.llm import run_with_submit
+from prospectus_agent.llm import function_tool, run_with_submit
 from prospectus_agent.prompts import redraft as redraft_prompts
 
-SUBMIT_REFINED_TOOL = {
-    "type": "function",
-    "name": "submit_refined_email",
-    "description": "Submit the refined subject and body for an existing draft.",
-    "strict": True,
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "email_subject": {"type": "string"},
-            "email_body": {"type": "string"},
-            "draft_notes": {
-                "type": "string",
-                "description": "Brief notes for the sender (or empty string).",
-            },
-        },
-        "required": ["email_subject", "email_body", "draft_notes"],
-        "additionalProperties": False,
+SUBMIT_REFINED_TOOL = function_tool(
+    "submit_refined_email",
+    "Submit the refined subject and body for an existing draft.",
+    {
+        "email_subject": {"type": "string"},
+        "email_body": {"type": "string"},
+        "draft_notes": {"type": "string",
+                        "description": "Brief notes for the sender (or empty string)."},
     },
-}
+    ["email_subject", "email_body", "draft_notes"],
+)
 
 
 def refine_email(client, conn, email_row, on_profile: str) -> dict:
@@ -76,12 +70,10 @@ def refine_email(client, conn, email_row, on_profile: str) -> dict:
 
 
 def refine_today(client, conn, on_profile: str, *, today: str | None = None,
-                 type: str = "initial") -> list[dict]:
-    """Refine every draft of `type` created today (default initial emails)."""
-    from datetime import date
-
+                 email_type: str = "initial") -> list[dict]:
+    """Refine every draft of `email_type` created today (default initial emails)."""
     today = today or date.today().isoformat()
-    emails = [e for e in db.emails_on(conn, today) if e["type"] == type]
+    emails = [e for e in db.emails_on(conn, today) if e["type"] == email_type]
     summaries = []
     for em in emails:
         company = db.get_company(conn, em["company_id"])

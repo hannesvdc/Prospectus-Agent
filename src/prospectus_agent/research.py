@@ -12,63 +12,51 @@ from prospectus_agent import agent_profile as profile
 from prospectus_agent import config
 from prospectus_agent import contacts as contacts_mod
 from prospectus_agent import db
-from prospectus_agent.llm import WEB_SEARCH_TOOL, run_with_submit
+from prospectus_agent.llm import WEB_SEARCH_TOOL, function_tool, run_with_submit
 from prospectus_agent.prompts import research as research_prompts
 from prospectus_agent.schemas import Candidate, OutreachResult
 
-SUBMIT_OUTREACH_TOOL = {
-    "type": "function",
-    "name": "submit_company_outreach",
-    "description": "Submit researched contacts and the drafted initial email.",
-    "strict": True,
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "refined_applications": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": f"2-4 concrete ways {profile.NAME} could help, grounded in the company's real work",
-            },
-            "public_emails": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Generic public inboxes found on the site (info@, contact@, sales@)",
-            },
-            "people": {
-                "type": "array",
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "name": {"type": "string"},
-                        "title": {"type": "string"},
-                        "public_email": {
-                            "type": ["string", "null"],
-                            "description": "Only if published publicly; otherwise null",
-                        },
-                    },
-                    "required": ["name", "title", "public_email"],
-                    "additionalProperties": False,
-                },
-                "description": "Senior / relevant people (leadership, R&D, engineering heads)",
-            },
-            "email_subject": {"type": "string"},
-            "email_body": {"type": "string"},
-            "draft_notes": {
-                "type": "string",
-                "description": "Brief notes for the sender (uncertainties, who to address, etc.)",
-            },
+SUBMIT_OUTREACH_TOOL = function_tool(
+    "submit_company_outreach",
+    "Submit researched contacts and the drafted initial email.",
+    {
+        "refined_applications": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": f"2-4 concrete ways {profile.NAME} could help, grounded in the company's real work",
         },
-        "required": [
-            "refined_applications",
-            "public_emails",
-            "people",
-            "email_subject",
-            "email_body",
-            "draft_notes",
-        ],
-        "additionalProperties": False,
+        "public_emails": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Generic public inboxes found on the site (info@, contact@, sales@)",
+        },
+        "people": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "title": {"type": "string"},
+                    "public_email": {
+                        "type": ["string", "null"],
+                        "description": "Only if published publicly; otherwise null",
+                    },
+                },
+                "required": ["name", "title", "public_email"],
+                "additionalProperties": False,
+            },
+            "description": "Senior / relevant people (leadership, R&D, engineering heads)",
+        },
+        "email_subject": {"type": "string"},
+        "email_body": {"type": "string"},
+        "draft_notes": {
+            "type": "string",
+            "description": "Brief notes for the sender (uncertainties, who to address, etc.)",
+        },
     },
-}
+    ["refined_applications", "public_emails", "people",
+     "email_subject", "email_body", "draft_notes"],
+)
 
 def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profile: str) -> dict:
     """Research one winner, store contacts + draft, mark 'drafted'.

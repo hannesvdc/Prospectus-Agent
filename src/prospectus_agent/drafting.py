@@ -5,25 +5,16 @@ from __future__ import annotations
 
 from prospectus_agent import config
 from prospectus_agent import db
-from prospectus_agent.llm import run_with_submit
+from prospectus_agent.llm import function_tool, run_with_submit
 from prospectus_agent.prompts import followup as followup_prompts
 from prospectus_agent.schemas import FollowUpResult
 
-SUBMIT_FOLLOWUP_TOOL = {
-    "type": "function",
-    "name": "submit_followup",
-    "description": "Submit the drafted follow-up email.",
-    "strict": True,
-    "parameters": {
-        "type": "object",
-        "properties": {
-            "email_subject": {"type": "string"},
-            "email_body": {"type": "string"},
-        },
-        "required": ["email_subject", "email_body"],
-        "additionalProperties": False,
-    },
-}
+SUBMIT_FOLLOWUP_TOOL = function_tool(
+    "submit_followup",
+    "Submit the drafted follow-up email.",
+    {"email_subject": {"type": "string"}, "email_body": {"type": "string"}},
+    ["email_subject", "email_body"],
+)
 
 
 def draft_followup(client, conn, company_row, on_profile: str):

@@ -25,6 +25,7 @@ from prospectus_agent import llm
 from prospectus_agent import on_profile
 from prospectus_agent import outbox
 from prospectus_agent import research
+from prospectus_agent import runner
 
 
 def _print_digest(winners_summaries: list[dict], followup_summaries: list[dict]) -> None:
@@ -68,15 +69,11 @@ def main() -> int:
     print(f"{agent_profile.NAME} prospecting agent — {date.today().isoformat()}\n")
 
     try:
-        config.require_api_key()
+        client, conn = runner.open_session()
     except RuntimeError as e:
         print(f"ERROR: {e}")
         return 1
 
-    client = config.get_client()
-    conn = db.connect( config.DB_PATH )
-    db.init_db( conn )
-    llm.reset_usage()
     emails_before = db.max_email_id( conn )  # so the outbox emits only THIS run's drafts
 
     print(f"Refreshing {agent_profile.NAME} profile...")
@@ -103,13 +100,9 @@ def main() -> int:
         print(f"\n✉  Wrote {n} draft(s) to {out_dir}/ (index.md + index.html) — "
               "recipients + subject + body, ready to copy-paste.")
 
-    u = llm.get_usage()
-    if u["calls"]:
-        print(
-            f"\nToken usage: {u['calls']} API call(s) — "
-            f"input {u['input']:,} (cached {u['cached']:,}), "
-            f"output {u['output']:,} (reasoning {u['reasoning']:,})."
-        )
+    usage = llm.usage_summary()
+    if usage:
+        print(f"\n{usage}")
 
     conn.close()
     return 0
