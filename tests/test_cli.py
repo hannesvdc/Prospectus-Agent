@@ -86,6 +86,21 @@ def test_refine_and_sent_are_rejected(monkeypatch):
         cli.main(["--followup", "--refine", "--sent"])
 
 
+def test_runall_dispatches(monkeypatch):
+    _isolate_env(monkeypatch)
+    calls = []
+    monkeypatch.setattr("prospectus_agent.run_all.main", lambda: calls.append("runall") or 0)
+    assert cli.main(["--runall"]) == 0
+    assert calls == ["runall"]
+
+
+def test_runall_rejects_other_flags(monkeypatch):
+    _isolate_env(monkeypatch)
+    for extra in (["--profile", "x"], ["--followup"], ["--refine"], ["--sent"]):
+        with pytest.raises(SystemExit):
+            cli.main(["--runall", *extra])
+
+
 def test_exit_code_is_propagated(monkeypatch):
     _isolate_env(monkeypatch)
     monkeypatch.setattr("prospectus_agent.daily_run.main", lambda: 3)

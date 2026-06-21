@@ -155,6 +155,7 @@ prospectus-agent --followup --refine  # FOLLOW-UPS: re-draft them with the lates
 prospectus-agent --followup --sent    # FOLLOW-UPS: record you sent them (resets the clock)
 
 prospectus-agent --profile acme       # any of the above, for a different business
+prospectus-agent --runall             # daily pipeline (prospects + follow-ups) for EVERY profile
 
 prospectus-status drafts            # list drafts ready to review
 prospectus-status show DOMAIN       # see the full draft + contacts

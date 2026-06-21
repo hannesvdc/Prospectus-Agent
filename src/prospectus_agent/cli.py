@@ -33,6 +33,13 @@ def build_parser() -> argparse.ArgumentParser:
         description="Daily prospecting agent: discover prospects and draft outreach emails.",
     )
     parser.add_argument(
+        "--runall",
+        action="store_true",
+        help="Run the daily pipeline (new prospects + follow-up sweep) for EVERY "
+             "configured profile (each profile.<name>.yaml), one per subprocess. "
+             "Standalone — can't be combined with the other flags.",
+    )
+    parser.add_argument(
         "--followup",
         action="store_true",
         help="Switch scope from new prospects (the default) to follow-ups: work on "
@@ -94,6 +101,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     _validate(args)
 
+    # --runall fans out to one subprocess per profile, so the parent stays
+    # profile-agnostic (don't apply a profile or import config here).
+    if args.runall:
+        from prospectus_agent import run_all
+        return run_all.main()
+
     # Importing paths loads .env (so DEFAULT_PROFILE is visible) and resolves HOME,
     # without yet computing config's path constants.
     from prospectus_agent import paths
@@ -121,7 +134,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 
 def _validate(args) -> None:
-    """Reject flag combinations that can't be honoured coherently (exit code 2)."""
+    """Reject flag combinations that can't be honoured coherently."""
+    if args.runall and (args.profile or args.followup or args.refine or args.sent):
+        raise SystemExit(
+            "error: --runall runs every profile's full daily pipeline and can't be "
+            "combined with --profile/--followup/--refine/--sent. Run those per "
+            "profile with --profile <name>."
+        )
     if args.refine and args.sent:
         raise SystemExit(
             "error: --refine and --sent can't be combined. --refine re-drafts an "
