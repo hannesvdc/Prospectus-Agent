@@ -1,11 +1,11 @@
 [project]
 name = "prospectus-agent"
-version = "0.2.0"
+version = "0.4.0"
 description = "Daily AI agent that finds prospective clients and drafts tailored outreach emails."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "Hannes Vandecasteele" }]
+authors = [{ name = "Hannes Vandecasteele", email="hannesv@opennumerics.com" }]
 dependencies = [
     "openai>=2.41.0",
     "python-dotenv>=1.2.0",
