@@ -76,8 +76,8 @@ def main(refine: bool = False, mark_sent: bool = False) -> int:
     # 3) Record sends (reset the follow-up clock), if asked.
     if mark_sent:
         marked = followups.mark_followups_sent(conn)
-        print(f"\n✓ Marked {len(marked)} follow-up(s) as sent "
-              "(follow-up clock reset to today).")
+        print(f"\n✓ Marked {len(marked)} follow-up(s) as sent — these are now "
+              "'followed_up' (done; they won't appear for follow-up again).")
 
     usage = llm.usage_summary()
     if usage:

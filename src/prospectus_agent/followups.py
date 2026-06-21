@@ -45,10 +45,10 @@ def due_followup_emails(conn) -> list:
 
 
 def mark_followups_sent(conn) -> list[dict]:
-    """Record that you've sent the due follow-ups: reset each such company's
-    last_contact_date to today, so the follow-up clock restarts and they drop off
-    the due list (a future follow-up can fire after the next interval). Only touches
-    companies that actually have a follow-up draft. Returns a summary list."""
+    """Record that you've sent the due follow-ups: move each such company to
+    'followed_up' (a terminal state) so it's done — we send ONE follow-up, never
+    more, and it won't reappear in the due list. Only touches companies that
+    actually have a follow-up draft. Returns a summary list."""
     today = date.today().isoformat()
     marked = []
     for row in db.companies_awaiting_followup(conn):
@@ -56,7 +56,7 @@ def mark_followups_sent(conn) -> list[dict]:
             continue
         if not db.latest_email(conn, row["id"], "followup"):
             continue
-        db.set_status(conn, row["domain"], "sent", contact_date=today)
+        db.set_status(conn, row["domain"], "followed_up", contact_date=today)
         marked.append({"name": row["name"], "domain": row["domain"]})
     return marked
 

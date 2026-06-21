@@ -102,3 +102,32 @@ def test_threshold_respected(conn, monkeypatch):
     _insert_sent(conn, "recent.com", days_ago=2)
     result = followups.run_followups(client=None, conn=conn, on_profile="ON")
     assert result == []
+
+
+# --- one-and-done follow-up ------------------------------------------------
+
+def test_mark_followups_sent_is_terminal(conn):
+    cid = _insert_sent(conn, "due.com", days_ago=14)
+    db.add_email(conn, cid, type="followup", subject="fu", body="fu")
+    _insert_sent(conn, "nofu.com", days_ago=14)  # due but no follow-up draft
+
+    marked = followups.mark_followups_sent(conn)
+    assert [m["domain"] for m in marked] == ["due.com"]  # only the one with a draft
+
+    # It moved to the terminal 'followed_up' status...
+    assert db.get_company(conn, cid)["status"] == "followed_up"
+    # ...so it no longer shows up as awaiting follow-up, EVER (not just for now).
+    assert all(r["domain"] != "due.com" for r in db.companies_awaiting_followup(conn))
+    assert followups.due_followup_emails(conn) == []  # nothing due anymore
+
+
+def test_followed_up_company_never_redrafts(conn, monkeypatch):
+    monkeypatch.setattr(
+        followups.drafting, "draft_followup",
+        lambda *a, **k: FollowUpResult(email_subject="x", email_body="y"),
+    )
+    cid = _insert_sent(conn, "due.com", days_ago=14)
+    db.add_email(conn, cid, type="followup", subject="fu", body="fu")
+    followups.mark_followups_sent(conn)
+    # Even long after, a follow-up sweep ignores a followed_up company.
+    assert followups.run_followups(client=None, conn=conn, on_profile="ON") == []

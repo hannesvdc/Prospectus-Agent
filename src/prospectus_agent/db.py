@@ -7,6 +7,7 @@ Status lifecycle for a company:
     new          -> qualified (score >= threshold), not yet drafted
     drafted      -> an initial email draft exists, ready for you to send
     sent         -> you sent it (sets last_contact_date); follow-up clock starts
+    followed_up  -> you sent the one follow-up; done — never followed up again
     replied      -> they responded; no follow-up needed
     not_interested -> closed
     not_a_fit    -> seen during discovery but below the fit threshold
@@ -22,6 +23,7 @@ VALID_STATUSES = {
     "new",
     "drafted",
     "sent",
+    "followed_up",
     "replied",
     "not_interested",
     "not_a_fit",
