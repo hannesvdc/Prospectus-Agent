@@ -1,9 +1,13 @@
-"""Run the daily pipeline for EVERY configured profile (`prospectus-agent --runall`).
+"""Fan a command out across EVERY configured profile (`prospectus-agent --runall`).
 
-Each profile is run in its own subprocess — config/agent_profile are per-process
+`--runall` runs the same thing you'd run for one business, but for all of them. With
+no action flags it's the daily pipeline (new prospects + follow-up sweep); combined
+with `--followup`/`--refine`/`--sent` it forwards those to each profile (e.g.
+`--runall --followup --refine` re-drafts every profile's follow-ups).
+
+Each profile runs in its own subprocess — config/agent_profile are per-process
 singletons keyed to the active profile, so separate processes keep the businesses
-fully isolated, and one profile failing doesn't stop the rest. The per-profile daily
-run already does both new prospects and the follow-up sweep.
+fully isolated, and one profile failing doesn't stop the rest.
 """
 from __future__ import annotations
 
@@ -24,22 +28,27 @@ def profile_names() -> list[str]:
     return names
 
 
-def main() -> int:
+def main(followup: bool = False, refine: bool = False, sent: bool = False) -> int:
     names = profile_names()
     if not names:
         print("No business profiles found (looked for profile.<name>.yaml in "
               f"{paths.HOME}). Create one (see profile.example.yaml).")
         return 0
 
-    print(f"Running the daily pipeline for {len(names)} profile(s): {', '.join(names)}\n")
+    extra = (["--followup"] if followup else []) + \
+            (["--refine"] if refine else []) + (["--sent"] if sent else [])
+    label = " ".join(extra) if extra else "daily pipeline"
+    print(f"Running `{label}` for {len(names)} profile(s): {', '.join(names)}\n")
+
     results: dict[str, int] = {}
     for name in names:
         print("=" * 72)
-        print(f"▶  {name}")
+        print(f"▶  {name}  ({label})")
         print("=" * 72)
-        # Re-invoke ourselves for this profile; output streams live.
+        # Re-invoke ourselves for this profile, forwarding the action flags. Output
+        # streams live.
         results[name] = subprocess.run(
-            [sys.executable, "-m", "prospectus_agent", "--profile", name]
+            [sys.executable, "-m", "prospectus_agent", "--profile", name, *extra]
         ).returncode
 
     print("\n" + "=" * 72)

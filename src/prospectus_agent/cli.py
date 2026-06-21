@@ -35,9 +35,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--runall",
         action="store_true",
-        help="Run the daily pipeline (new prospects + follow-up sweep) for EVERY "
-             "configured profile (each profile.<name>.yaml), one per subprocess. "
-             "Standalone — can't be combined with the other flags.",
+        help="Fan out across EVERY configured profile (each profile.<name>.yaml), one "
+             "per subprocess. Alone: the daily pipeline. Forwards action flags, so "
+             "`--runall --followup --refine` re-drafts every profile's follow-ups. "
+             "(Can't combine with --profile.)",
     )
     parser.add_argument(
         "--followup",
@@ -101,11 +102,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     _validate(args)
 
-    # --runall fans out to one subprocess per profile, so the parent stays
-    # profile-agnostic (don't apply a profile or import config here).
+    # --runall fans out to one subprocess per profile (forwarding the action flags),
+    # so the parent stays profile-agnostic (don't apply a profile or import config).
     if args.runall:
         from prospectus_agent import run_all
-        return run_all.main()
+        return run_all.main(followup=args.followup, refine=args.refine, sent=args.sent)
 
     # Importing paths loads .env (so DEFAULT_PROFILE is visible) and resolves HOME,
     # without yet computing config's path constants.
@@ -135,11 +136,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 def _validate(args) -> None:
     """Reject flag combinations that can't be honoured coherently."""
-    if args.runall and (args.profile or args.followup or args.refine or args.sent):
+    if args.runall and args.profile:
         raise SystemExit(
-            "error: --runall runs every profile's full daily pipeline and can't be "
-            "combined with --profile/--followup/--refine/--sent. Run those per "
-            "profile with --profile <name>."
+            "error: --runall already runs every profile — drop --profile (or run that "
+            "one profile on its own, without --runall)."
         )
     if args.refine and args.sent:
         raise SystemExit(

@@ -75,15 +75,27 @@ def email_rules() -> str:
            conversational, like the example opener(s) below.{opener_examples}
            Do NOT open by recapping the prospect's own work, and do NOT diagnose their
            needs (no "your work suggests you need…").{voice_notes}
-        2. Then, at a HIGH LEVEL, suggest the kinds of problems {profile.NAME} helps
-           with that are relevant to their space, expressed as the benefit to them
-           (e.g. faster turnaround, more confidence in results, lower cost) —
-           illustrative, not prescriptive; one or two light, plausible connections to
-           their domain. Address the prospect by their COMPANY NAME here (the prospect
-           company named above) — e.g. "For [their company], we can…" — NOT by an
-           impersonal description of their field or product (avoid openings like "For
-           biologically-aware generative AI,"). Do NOT prescribe fixes for their
-           specific product or claim to know their internals.
+        2. The "what's in it for them" paragraph — make it SPECIFIC, not generic.
+           From {profile.NAME}'s capability areas / offerings listed above, pick the
+           TWO that map most closely to THIS prospect's actual work, NAME those two
+           explicitly, and tie each to a concrete outcome. Anchor on the prospect's
+           SPECIFIC products, projects, or workflows from your research (not just their
+           industry), and where natural name the concrete METHOD within the capability
+           (a particular kind of simulation, model, solver, or analysis — e.g.
+           "transient conjugate-heat-transfer CFD", "a surrogate model of …",
+           "global sensitivity analysis"), not just the capability label. Write it
+           in the first person ("we") and address them by COMPANY NAME — e.g. "For
+           [their company], we can use [specific method from capability one] to
+           [specific outcome on their actual product/workflow], and [capability two]
+           to [specific outcome]." The reader should see exactly which two of our
+           capabilities fit them and why. Keep every claim truthful — don't invent
+           metrics, numbers, or internal details you can't ground in the research. AVOID broad, fluffy benefit lists that could apply to any company
+           ("faster turnaround, more confidence, cleaner paths") and do NOT cram in
+           more than two capabilities. Be CONFIDENT and direct ("we help teams like
+           yours do X", "we can use Y to Z") — do NOT hedge with phrasings like "we'd
+           most likely help", "we may be able to", or "that could mean". Ground it in
+           what they publicly do, but don't claim to know their internal stack or
+           diagnose their specific problems for them.
         3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
            intro call), framed around the VALUE to them — e.g. "to see where we could
            help" or "to explore how {profile.NAME} could create value for your team".

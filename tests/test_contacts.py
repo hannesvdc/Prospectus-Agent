@@ -6,11 +6,17 @@ from prospectus_agent import contacts
 
 def test_basic_patterns_and_order():
     out = contacts.guess_emails("Jane Doe", "acme.com")
+    # Wider net of common corporate formats, most-likely first.
     assert out == [
         "jane.doe@acme.com",
         "jdoe@acme.com",
         "janedoe@acme.com",
         "jane@acme.com",
+        "j.doe@acme.com",
+        "jane_doe@acme.com",
+        "janed@acme.com",
+        "doe.jane@acme.com",
+        "doe@acme.com",
     ]
 
 

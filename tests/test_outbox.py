@@ -78,6 +78,26 @@ def test_copyable_recipient_line(conn, tmp_path):
     assert "<code>info@acme.com, jane.doe@acme.com</code>" in html
 
 
+def test_recipient_line_keeps_one_guess_per_person(conn, tmp_path):
+    today = date.today().isoformat()
+    cid = db.upsert_company(
+        conn, name="Acme", domain="acme.com", hq_location="", industry="X",
+        fit_score=9, why_fit="x", suggested_applications=[], source_urls=[], status="drafted",
+    )
+    db.add_contact(conn, cid, name="", role="generic inbox",
+                   email="info@acme.com", email_confidence="public")
+    for em in ("jane.doe@acme.com", "jdoe@acme.com", "janedoe@acme.com"):  # 3 formats, one person
+        db.add_contact(conn, cid, name="Jane Doe", role="CTO", email=em, email_confidence="guessed")
+    db.add_email(conn, cid, type="initial", subject="s", body="b")
+    outbox.generate(conn, out_root=str(tmp_path), today=today)
+
+    md = (tmp_path / today / "new_prospects.md").read_text()
+    # All format guesses are listed for the user to pick from...
+    assert all(e in md for e in ("jane.doe@acme.com", "jdoe@acme.com", "janedoe@acme.com"))
+    # ...but the copyable To: line has public + only the top guess for that person.
+    assert "**To (copy):** `info@acme.com, jane.doe@acme.com`" in md
+
+
 def test_guessed_only_warns(conn, tmp_path):
     _seed(conn, with_public=False)
     today = date.today().isoformat()

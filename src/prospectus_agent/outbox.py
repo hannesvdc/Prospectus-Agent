@@ -41,14 +41,22 @@ def _contact_label(c) -> str:
 
 
 def _recipient_line(contacts) -> str:
-    """Comma-separated address list to paste straight into Gmail's To: field
-    (public addresses first, then guessed — same order as the contact list)."""
-    seen, emails = set(), []
+    """Comma-separated address list to paste straight into Gmail's To: field. Includes
+    all published addresses but only the TOP guess per person — so casting a wider net
+    of format guesses (listed in full above) doesn't turn this into a 15-address line
+    you'd accidentally send to. Verify the right format before sending."""
+    seen, emails, guessed_people = set(), [], set()
     for c in contacts:
         e = (c["email"] or "").strip()
-        if e and e not in seen:
-            seen.add(e)
-            emails.append(e)
+        if not e or e in seen:
+            continue
+        if c["email_confidence"] == "guessed":
+            person = (c["name"] or "").lower()
+            if person in guessed_people:
+                continue  # keep only the first (most-likely) guess for this person
+            guessed_people.add(person)
+        seen.add(e)
+        emails.append(e)
     return ", ".join(emails)
 
 

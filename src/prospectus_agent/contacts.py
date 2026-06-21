@@ -55,12 +55,25 @@ def guess_emails(full_name: str, domain: str) -> list[str]:
     if not domain or not first:
         return []
 
+    # Common corporate local-part formats, most-likely first. Capped per person by
+    # GUESSES_PER_PERSON downstream, so order matters.
+    fi = first[0]
     patterns: list[str] = []
     if last:
-        patterns.append(f"{first}.{last}@{domain}")   # jane.doe@
-        patterns.append(f"{first[0]}{last}@{domain}")  # jdoe@
-        patterns.append(f"{first}{last}@{domain}")     # janedoe@
-    patterns.append(f"{first}@{domain}")               # jane@
+        li = last[0]
+        patterns += [
+            f"{first}.{last}@{domain}",    # jane.doe@
+            f"{fi}{last}@{domain}",        # jdoe@
+            f"{first}{last}@{domain}",     # janedoe@
+            f"{first}@{domain}",           # jane@
+            f"{fi}.{last}@{domain}",       # j.doe@
+            f"{first}_{last}@{domain}",    # jane_doe@
+            f"{first}{li}@{domain}",       # janed@
+            f"{last}.{first}@{domain}",    # doe.jane@
+            f"{last}@{domain}",            # doe@
+        ]
+    else:
+        patterns.append(f"{first}@{domain}")               # jane@
 
     # De-dupe, preserve order.
     seen: set[str] = set()

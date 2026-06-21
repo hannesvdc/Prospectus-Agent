@@ -27,6 +27,20 @@ def test_main_runs_each_profile(monkeypatch, tmp_path):
     assert run_all.main() == 0
     profiles = [cmd[cmd.index("--profile") + 1] for cmd in ran]
     assert profiles == ["a", "b"]
+    # No action flags forwarded for a bare run.
+    assert all("--refine" not in cmd and "--followup" not in cmd for cmd in ran)
+
+
+def test_main_forwards_action_flags(monkeypatch, tmp_path):
+    (tmp_path / "profile.a.yaml").write_text("x")
+    monkeypatch.setattr(run_all.paths, "HOME", tmp_path)
+    ran = []
+    monkeypatch.setattr(
+        run_all.subprocess, "run",
+        lambda cmd, **k: ran.append(cmd) or SimpleNamespace(returncode=0),
+    )
+    run_all.main(followup=True, refine=True)
+    assert "--followup" in ran[0] and "--refine" in ran[0] and "--sent" not in ran[0]
 
 
 def test_main_returns_nonzero_if_any_profile_fails(monkeypatch, tmp_path):
