@@ -79,8 +79,11 @@ def email_rules() -> str:
            with that are relevant to their space, expressed as the benefit to them
            (e.g. faster turnaround, more confidence in results, lower cost) —
            illustrative, not prescriptive; one or two light, plausible connections to
-           their domain. Do NOT prescribe fixes for their specific product or claim to
-           know their internals.
+           their domain. Address the prospect by their COMPANY NAME here (the prospect
+           company named above) — e.g. "For [their company], we can…" — NOT by an
+           impersonal description of their field or product (avoid openings like "For
+           biologically-aware generative AI,"). Do NOT prescribe fixes for their
+           specific product or claim to know their internals.
         3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
            intro call), framed around the VALUE to them — e.g. "to see where we could
            help" or "to explore how {profile.NAME} could create value for your team".
