@@ -141,10 +141,12 @@ knobs live here (gitignored):
 
 ```bash
 prospectus-agent                    # find prospects + draft emails
-prospectus-agent --refine           # re-draft today's emails with the latest prompt
+prospectus-agent --refine           # re-draft today's prospect emails with the latest prompt
 prospectus-agent --sent             # record that you sent the drafts (starts follow-up clock)
 prospectus-agent --followup         # draft follow-ups for anyone past the no-reply threshold
+prospectus-agent --followup --refine  # ...and re-draft existing follow-ups with the latest voice
 prospectus-agent --profile acme     # run a different business (profile.acme.yaml)
+# flags stack, e.g.  prospectus-agent --sent --followup
 
 prospectus-status drafts            # list drafts ready to review
 prospectus-status show DOMAIN       # see the full draft + contacts

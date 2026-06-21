@@ -47,9 +47,31 @@ def test_followup_flag_runs_followup(monkeypatch):
     _isolate_env(monkeypatch)
     calls = []
     monkeypatch.setattr("prospectus_agent.daily_run.main", lambda: calls.append("daily") or 0)
-    monkeypatch.setattr("prospectus_agent.followup_run.main", lambda: calls.append("followup") or 0)
+    monkeypatch.setattr("prospectus_agent.followup_run.main",
+                        lambda refine=False: calls.append(("followup", refine)) or 0)
     assert cli.main(["--followup"]) == 0
-    assert calls == ["followup"]
+    assert calls == [("followup", False)]
+
+
+def test_followup_refine_stacks(monkeypatch):
+    _isolate_env(monkeypatch)
+    calls = []
+    monkeypatch.setattr("prospectus_agent.refine.main", lambda: calls.append("refine") or 0)
+    monkeypatch.setattr("prospectus_agent.followup_run.main",
+                        lambda refine=False: calls.append(("followup", refine)) or 0)
+    # --followup --refine => follow-up workflow in refine mode, NOT the initial refine.
+    assert cli.main(["--followup", "--refine"]) == 0
+    assert calls == [("followup", True)]
+
+
+def test_sent_and_followup_stack(monkeypatch):
+    _isolate_env(monkeypatch)
+    calls = []
+    monkeypatch.setattr("prospectus_agent.mark_sent.main", lambda: calls.append("sent") or 0)
+    monkeypatch.setattr("prospectus_agent.followup_run.main",
+                        lambda refine=False: calls.append("followup") or 0)
+    assert cli.main(["--sent", "--followup"]) == 0
+    assert calls == ["sent", "followup"]
 
 
 def test_exit_code_is_propagated(monkeypatch):

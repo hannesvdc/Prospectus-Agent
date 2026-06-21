@@ -15,6 +15,8 @@ from datetime import date
 
 from prospectus_agent import config
 from prospectus_agent import db
+from prospectus_agent import drafting
+from prospectus_agent import followups
 from prospectus_agent.llm import function_tool, run_with_submit
 from prospectus_agent.prompts import redraft as redraft_prompts
 
@@ -80,4 +82,27 @@ def refine_today(client, conn, on_profile: str, *, today: str | None = None,
         if company:
             print(f"  ● {company['name']} ({company['domain']})")
         summaries.append(refine_email(client, conn, em, on_profile))
+    return summaries
+
+
+def refine_followups(client, conn, on_profile: str) -> list[dict]:
+    """Re-draft every currently-due follow-up IN PLACE with the current follow-up
+    prompt/voice (uses the follow-up prompt, not the initial-email rules). Returns a
+    summary list."""
+    summaries = []
+    for row in db.companies_awaiting_followup(conn):
+        if not followups.is_due(row):
+            continue
+        existing = db.latest_email(conn, row["id"], "followup")
+        if not existing:
+            continue
+        summary = {"name": row["name"], "domain": row["domain"], "refined": False}
+        result = drafting.draft_followup(client, conn, row, on_profile)
+        if result:
+            db.update_email(conn, existing["id"],
+                            subject=result.email_subject, body=result.email_body)
+            summary.update(refined=True, subject=result.email_subject)
+        else:
+            print(f"    ! no refined follow-up for {row['name']}")
+        summaries.append(summary)
     return summaries

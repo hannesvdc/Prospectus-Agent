@@ -199,3 +199,20 @@ def generate(conn, *, out_root: str | None = None, today: str | None = None,
         total += _write_group(conn, out_dir, today, basename, title, group, overwrite)
 
     return (out_dir, total) if total else None
+
+
+def write_file(conn, emails, *, basename: str, title: str,
+               out_root: str | None = None, today: str | None = None):
+    """Write an EXPLICIT list of email rows to <out_root>/<today>/<basename>.{md,html},
+    overwriting that file. Unlike generate(), this ignores each email's date — it
+    surfaces a curated set (e.g. ALL currently-due follow-ups) into today's folder,
+    so `--followup` always produces a fresh file even when the drafts already existed.
+    Returns (out_dir, count) or None if there's nothing to write."""
+    out_root = out_root or config.OUTBOX_DIR
+    today = today or date.today().isoformat()
+    if not emails:
+        return None
+    out_dir = os.path.join(out_root, today)
+    os.makedirs(out_dir, exist_ok=True)
+    n = _write_group(conn, out_dir, today, basename, title, emails, overwrite=True)
+    return (out_dir, n) if n else None

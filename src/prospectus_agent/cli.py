@@ -35,22 +35,23 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--refine",
         action="store_true",
-        help="Re-draft today's existing emails with the current prompt/profile "
-             "(no new discovery or web research), then regenerate the outbox.",
+        help="Re-draft existing drafts with the current prompt/profile (no new "
+             "discovery). Alone: refines today's prospect emails. Stacked with "
+             "--followup (`--followup --refine`): re-drafts the due follow-ups.",
     )
     parser.add_argument(
         "--sent",
         action="store_true",
         help="Record that you've sent the drafted emails: mark all 'drafted' "
              "companies as 'sent' (contact date = their draft date) so the "
-             "follow-up clock starts. No drafting or web research.",
+             "follow-up clock starts. No drafting or web research. Stackable.",
     )
     parser.add_argument(
         "--followup",
         action="store_true",
-        help="Follow-up sweep only: list companies past the no-reply threshold, "
-             "draft a follow-up for each, and write them to the outbox. No new "
-             "discovery.",
+        help="Follow-up sweep: draft a follow-up for each company past the no-reply "
+             "threshold and write them to followups.md. No new discovery. Add "
+             "--refine to re-draft existing follow-ups too.",
     )
     parser.add_argument(
         "--profile",
@@ -99,20 +100,33 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if profile:
         _apply_profile(profile, paths.HOME)
 
+    # Flags stack and run in order. With none of these, do the daily pipeline.
+    ran = False
+
     if args.sent:
         from prospectus_agent import mark_sent
-        return mark_sent.main()
+        rc = mark_sent.main()
+        if rc:
+            return rc
+        ran = True
 
     if args.followup:
         from prospectus_agent import followup_run
-        return followup_run.main()
-
-    if args.refine:
+        rc = followup_run.main(refine=args.refine)  # --followup --refine => re-draft
+        if rc:
+            return rc
+        ran = True
+    elif args.refine:
         from prospectus_agent import refine
-        return refine.main()
+        rc = refine.main()
+        if rc:
+            return rc
+        ran = True
 
-    from prospectus_agent import daily_run
-    return daily_run.main()
+    if not ran:
+        from prospectus_agent import daily_run
+        return daily_run.main()
+    return 0
 
 
 if __name__ == "__main__":

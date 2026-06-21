@@ -26,6 +26,24 @@ def business_days_since(start_iso: str, end: date | None = None) -> int:
     return count
 
 
+def is_due(row) -> bool:
+    """True if a 'sent' company row is past the follow-up threshold."""
+    return business_days_since(row["last_contact_date"]) >= config.FOLLOWUP_BUSINESS_DAYS
+
+
+def due_followup_emails(conn) -> list:
+    """Latest follow-up draft for every company currently past the threshold —
+    used to (re)write a complete followups.md regardless of when each was drafted."""
+    out = []
+    for row in db.companies_awaiting_followup(conn):
+        if not is_due(row):
+            continue
+        em = db.latest_email(conn, row["id"], "followup")
+        if em:
+            out.append(em)
+    return out
+
+
 def run_followups(client, conn, on_profile: str) -> list[dict]:
     """Sweep for stale outreach; draft follow-ups. Returns a list of summary
     dicts for the digest."""

@@ -145,6 +145,29 @@ def test_overwrite_regenerates_fresh(conn, tmp_path):
     assert index.count("# New prospect drafts") == 1    # single fresh header
 
 
+def test_write_file_surfaces_emails_regardless_of_date(conn, tmp_path):
+    today = date.today().isoformat()
+    cid = _seed(conn, domain="old.com", etype="followup")
+    conn.execute("UPDATE emails SET created_at='2000-01-01' WHERE company_id=?", (cid,))
+    conn.commit()
+    em = conn.execute("SELECT * FROM emails WHERE company_id=?", (cid,)).fetchone()
+
+    out = outbox.write_file(conn, [em], basename="followups", title="Follow-up drafts",
+                            out_root=str(tmp_path), today=today)
+    assert out == (str(tmp_path / today), 1)
+    md = (tmp_path / today / "followups.md").read_text()
+    assert "old.com" in md and "# Follow-up drafts" in md
+    # Overwrites on a second call (idempotent), doesn't append.
+    outbox.write_file(conn, [em], basename="followups", title="Follow-up drafts",
+                      out_root=str(tmp_path), today=today)
+    assert (tmp_path / today / "followups.md").read_text().count("# Follow-up drafts") == 1
+
+
+def test_write_file_empty_returns_none(conn, tmp_path):
+    assert outbox.write_file(conn, [], basename="followups", title="x",
+                             out_root=str(tmp_path), today="2026-01-01") is None
+
+
 def test_nothing_drafted_returns_none(conn, tmp_path):
     assert outbox.generate(conn, out_root=str(tmp_path), today="2026-06-10") is None
 
