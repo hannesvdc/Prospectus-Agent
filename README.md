@@ -139,14 +139,22 @@ knobs live here (gitignored):
 
 ## Daily use
 
+The CLI is **scope × action**. Scope: which business (`--profile`) and which drafts —
+*new prospects* by default, *follow-ups* with `--followup`. Action: `--refine`
+(re-draft) or `--sent` (record sends); with no action, the default scope discovers +
+drafts. `--refine` and `--sent` can't be combined (one makes a new unsent draft, the
+other says it's already sent).
+
 ```bash
-prospectus-agent                    # find prospects + draft emails
-prospectus-agent --refine           # re-draft today's prospect emails with the latest prompt
-prospectus-agent --sent             # record that you sent the drafts (starts follow-up clock)
-prospectus-agent --followup         # draft follow-ups for anyone past the no-reply threshold
-prospectus-agent --followup --refine  # ...and re-draft existing follow-ups with the latest voice
-prospectus-agent --profile acme     # run a different business (profile.acme.yaml)
-# flags stack, e.g.  prospectus-agent --sent --followup
+prospectus-agent                    # NEW PROSPECTS: discover + draft
+prospectus-agent --refine           # NEW PROSPECTS: re-draft today's with the latest prompt
+prospectus-agent --sent             # NEW PROSPECTS: record you sent them (starts follow-up clock)
+
+prospectus-agent --followup           # FOLLOW-UPS: draft one for anyone past the threshold
+prospectus-agent --followup --refine  # FOLLOW-UPS: re-draft them with the latest voice
+prospectus-agent --followup --sent    # FOLLOW-UPS: record you sent them (resets the clock)
+
+prospectus-agent --profile acme       # any of the above, for a different business
 
 prospectus-status drafts            # list drafts ready to review
 prospectus-status show DOMAIN       # see the full draft + contacts

@@ -33,25 +33,25 @@ def build_parser() -> argparse.ArgumentParser:
         description="Daily prospecting agent: discover prospects and draft outreach emails.",
     )
     parser.add_argument(
+        "--followup",
+        action="store_true",
+        help="Switch scope from new prospects (the default) to follow-ups: work on "
+             "companies past the no-reply threshold. Alone, drafts a follow-up for "
+             "each. Combine with --refine or --sent (below).",
+    )
+    parser.add_argument(
         "--refine",
         action="store_true",
-        help="Re-draft existing drafts with the current prompt/profile (no new "
-             "discovery). Alone: refines today's prospect emails. Stacked with "
-             "--followup (`--followup --refine`): re-drafts the due follow-ups.",
+        help="Action: re-draft the in-scope existing drafts with the current "
+             "prompt/profile (no discovery). Default scope = today's prospect "
+             "emails; with --followup = the due follow-ups. Can't combine with --sent.",
     )
     parser.add_argument(
         "--sent",
         action="store_true",
-        help="Record that you've sent the drafted emails: mark all 'drafted' "
-             "companies as 'sent' (contact date = their draft date) so the "
-             "follow-up clock starts. No drafting or web research. Stackable.",
-    )
-    parser.add_argument(
-        "--followup",
-        action="store_true",
-        help="Follow-up sweep: draft a follow-up for each company past the no-reply "
-             "threshold and write them to followups.md. No new discovery. Add "
-             "--refine to re-draft existing follow-ups too.",
+        help="Action: record that you've sent the in-scope drafts (starts/resets the "
+             "follow-up clock). Default scope = mark drafted prospects sent; with "
+             "--followup = mark due follow-ups sent. Can't combine with --refine.",
     )
     parser.add_argument(
         "--profile",
@@ -92,6 +92,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     `--profile` if given, else $DEFAULT_PROFILE (from .env); if neither, the legacy
     profile.yaml / prospects.db defaults apply."""
     args = build_parser().parse_args(argv)
+    _validate(args)
 
     # Importing paths loads .env (so DEFAULT_PROFILE is visible) and resolves HOME,
     # without yet computing config's path constants.
@@ -100,33 +101,34 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if profile:
         _apply_profile(profile, paths.HOME)
 
-    # Flags stack and run in order. With none of these, do the daily pipeline.
-    ran = False
-
-    if args.sent:
-        from prospectus_agent import mark_sent
-        rc = mark_sent.main()
-        if rc:
-            return rc
-        ran = True
-
+    # `--followup` selects the follow-up SCOPE; `--refine`/`--sent` are modifiers that
+    # act within it. Without `--followup` the same modifiers act on the initial drafts,
+    # and with no modifiers at all we run the daily discovery pipeline.
     if args.followup:
         from prospectus_agent import followup_run
-        rc = followup_run.main(refine=args.refine)  # --followup --refine => re-draft
-        if rc:
-            return rc
-        ran = True
-    elif args.refine:
-        from prospectus_agent import refine
-        rc = refine.main()
-        if rc:
-            return rc
-        ran = True
+        return followup_run.main(refine=args.refine, mark_sent=args.sent)
 
-    if not ran:
-        from prospectus_agent import daily_run
-        return daily_run.main()
-    return 0
+    if args.refine:  # re-draft today's initial prospect emails
+        from prospectus_agent import refine
+        return refine.main()
+
+    if args.sent:  # record that the initial drafts were sent
+        from prospectus_agent import mark_sent
+        return mark_sent.main()
+
+    from prospectus_agent import daily_run
+    return daily_run.main()
+
+
+def _validate(args) -> None:
+    """Reject flag combinations that can't be honoured coherently (exit code 2)."""
+    if args.refine and args.sent:
+        raise SystemExit(
+            "error: --refine and --sent can't be combined. --refine re-drafts an "
+            "email into a NEW, unsent version, while --sent records that you've "
+            "already sent it — marking a fresh re-draft as 'sent' would be wrong. "
+            "Re-draft first, send it, then run --sent."
+        )
 
 
 if __name__ == "__main__":
