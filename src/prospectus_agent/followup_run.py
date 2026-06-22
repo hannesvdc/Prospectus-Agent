@@ -76,8 +76,10 @@ def main(refine: bool = False, mark_sent: bool = False) -> int:
     # 3) Record sends (reset the follow-up clock), if asked.
     if mark_sent:
         marked = followups.mark_followups_sent(conn)
-        print(f"\n✓ Marked {len(marked)} follow-up(s) as sent — these are now "
-              "'followed_up' (done; they won't appear for follow-up again).")
+        done = sum(1 for m in marked if m["final"])
+        print(f"\n✓ Recorded {len(marked)} follow-up(s) as sent — "
+              f"{len(marked) - done} now await a final follow-up, "
+              f"{done} completed the sequence (done; won't appear again).")
 
     usage = llm.usage_summary()
     if usage:

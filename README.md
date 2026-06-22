@@ -168,7 +168,10 @@ prospectus-status mark DOMAIN replied    # or: not_interested
 (With the venv activated, the commands are on your PATH. Otherwise prefix with
 `.venv/bin/`, e.g. `.venv/bin/prospectus-agent`.)
 
-Status values: `new`, `drafted`, `sent`, `replied`, `not_interested`, `not_a_fit`.
+Status values: `new`, `drafted`, `sent`, `followed_up` (1st follow-up sent, final
+pending), `no_reply` (both follow-ups sent, done), `replied`, `not_interested`, `not_a_fit`.
+The agent sends **two follow-ups max** — a fuller first one, then a short final
+touch-base — then stops.
 Reply tracking is fully manual — the agent never reads your inbox.
 
 ## A few honest notes

@@ -55,7 +55,7 @@ def _insert_sent(conn, domain, days_ago):
 def test_run_followups_drafts_due_company(conn, monkeypatch):
     calls = []
 
-    def fake_draft(client, c, row, profile):
+    def fake_draft(client, c, row, profile, *, final=False):
         calls.append(row["domain"])
         return FollowUpResult(email_subject="Following up", email_body="Just checking in.")
 
@@ -104,30 +104,53 @@ def test_threshold_respected(conn, monkeypatch):
     assert result == []
 
 
-# --- one-and-done follow-up ------------------------------------------------
+# --- two-follow-up sequence ------------------------------------------------
 
-def test_mark_followups_sent_is_terminal(conn):
+def test_mark_advances_sent_to_followed_up_then_terminates(conn):
     cid = _insert_sent(conn, "due.com", days_ago=14)
     db.add_email(conn, cid, type="followup", subject="fu", body="fu")
     _insert_sent(conn, "nofu.com", days_ago=14)  # due but no follow-up draft
 
+    # First send: 1st follow-up -> 'followed_up' (NOT terminal — final still pending).
     marked = followups.mark_followups_sent(conn)
-    assert [m["domain"] for m in marked] == ["due.com"]  # only the one with a draft
-
-    # It moved to the terminal 'followed_up' status...
+    assert [(m["domain"], m["final"]) for m in marked] == [("due.com", False)]
     assert db.get_company(conn, cid)["status"] == "followed_up"
-    # ...so it no longer shows up as awaiting follow-up, EVER (not just for now).
+    assert any(r["domain"] == "due.com" for r in db.companies_awaiting_followup(conn))
+
+    # Make it due again; second send: final follow-up -> 'no_reply' (terminal).
+    conn.execute("UPDATE companies SET last_contact_date=? WHERE id=?",
+                 ((date.today() - timedelta(days=14)).isoformat(), cid))
+    conn.commit()
+    marked2 = followups.mark_followups_sent(conn)
+    assert [(m["domain"], m["final"]) for m in marked2] == [("due.com", True)]
+    assert db.get_company(conn, cid)["status"] == "no_reply"
     assert all(r["domain"] != "due.com" for r in db.companies_awaiting_followup(conn))
-    assert followups.due_followup_emails(conn) == []  # nothing due anymore
 
 
-def test_followed_up_company_never_redrafts(conn, monkeypatch):
+def test_second_followup_is_drafted_as_final(conn, monkeypatch):
+    captured = {}
+
+    def fake(client, c, row, profile, *, final=False):
+        captured["final"] = final
+        return FollowUpResult(email_subject="s", email_body="b")
+
+    monkeypatch.setattr(followups.drafting, "draft_followup", fake)
+    _insert_sent(conn, "due.com", days_ago=14)
+    db.set_status(conn, "due.com", "followed_up")  # 1st done; final is next
+
+    result = followups.run_followups(client=None, conn=conn, on_profile="ON")
+    assert captured["final"] is True
+    assert next(r for r in result if r["domain"] == "due.com")["final"] is True
+
+
+def test_no_reply_company_is_done(conn, monkeypatch):
     monkeypatch.setattr(
         followups.drafting, "draft_followup",
         lambda *a, **k: FollowUpResult(email_subject="x", email_body="y"),
     )
     cid = _insert_sent(conn, "due.com", days_ago=14)
     db.add_email(conn, cid, type="followup", subject="fu", body="fu")
-    followups.mark_followups_sent(conn)
-    # Even long after, a follow-up sweep ignores a followed_up company.
+    db.set_status(conn, "due.com", "no_reply")  # both follow-ups sent
+    # Terminal — never swept again.
     assert followups.run_followups(client=None, conn=conn, on_profile="ON") == []
+    assert followups.due_followup_emails(conn) == []

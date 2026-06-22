@@ -17,9 +17,10 @@ SUBMIT_FOLLOWUP_TOOL = function_tool(
 )
 
 
-def draft_followup(client, conn, company_row, on_profile: str):
-    """Draft a short follow-up for a company that hasn't replied. Returns a
-    FollowUpResult or None. No web tools needed — references the prior email."""
+def draft_followup(client, conn, company_row, on_profile: str, *, final: bool = False):
+    """Draft a follow-up for a company that hasn't replied. `final=True` produces the
+    short second/last follow-up. Returns a FollowUpResult or None. No web tools — it
+    references the prior email."""
     prior = db.latest_email(conn, company_row["id"], "initial")
     prior_block = (
         f"Original email subject: {prior['subject']}\n\nOriginal email body:\n{prior['body']}"
@@ -31,7 +32,7 @@ def draft_followup(client, conn, company_row, on_profile: str):
         client,
         model=config.MODEL,
         system=followup_prompts.system(),
-        user_text=followup_prompts.build_user(company_row, prior_block, on_profile),
+        user_text=followup_prompts.build_user(company_row, prior_block, on_profile, final=final),
         tools=[SUBMIT_FOLLOWUP_TOOL],
         submit_tool_name="submit_followup",
         max_output_tokens=config.DRAFT_MAX_TOKENS,

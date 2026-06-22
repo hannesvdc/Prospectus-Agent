@@ -6,8 +6,9 @@ contacts and drafted emails. Plain, deterministic Python — no LLM here.
 Status lifecycle for a company:
     new          -> qualified (score >= threshold), not yet drafted
     drafted      -> an initial email draft exists, ready for you to send
-    sent         -> you sent it (sets last_contact_date); follow-up clock starts
-    followed_up  -> you sent the one follow-up; done — never followed up again
+    sent         -> you sent it (sets last_contact_date); 1st follow-up clock starts
+    followed_up  -> you sent the 1st follow-up; 2nd (final) follow-up clock starts
+    no_reply     -> both follow-ups sent, no response; done — never followed up again
     replied      -> they responded; no follow-up needed
     not_interested -> closed
     not_a_fit    -> seen during discovery but below the fit threshold
@@ -24,6 +25,7 @@ VALID_STATUSES = {
     "drafted",
     "sent",
     "followed_up",
+    "no_reply",
     "replied",
     "not_interested",
     "not_a_fit",
@@ -206,10 +208,12 @@ def companies_by_status(conn: sqlite3.Connection, status: str) -> list[sqlite3.R
 
 
 def companies_awaiting_followup(conn: sqlite3.Connection) -> list[sqlite3.Row]:
-    """Companies marked 'sent' with a contact date set (business-day math is
-    done by the caller, which knows the threshold)."""
+    """Companies awaiting a follow-up: status 'sent' (1st follow-up due) or
+    'followed_up' (2nd/final follow-up due), with a contact date set. Business-day
+    math is done by the caller, which knows the threshold."""
     return conn.execute(
-        "SELECT * FROM companies WHERE status='sent' AND last_contact_date IS NOT NULL"
+        "SELECT * FROM companies WHERE status IN ('sent', 'followed_up') "
+        "AND last_contact_date IS NOT NULL"
     ).fetchall()
 
 

@@ -24,8 +24,11 @@ def _voice_notes() -> str:
             f"NOT let them expand the follow-up into a full pitch):\n{notes}\n")
 
 
-def build_user(company_row, prior_block: str, on_profile: str) -> str:
-    """`company_row` is a sqlite3.Row (name/domain/last_contact_date)."""
+def build_user(company_row, prior_block: str, on_profile: str, final: bool = False) -> str:
+    """`company_row` is a sqlite3.Row (name/domain/last_contact_date). `final=True`
+    produces the short, last touch-base follow-up."""
+    if final:
+        return _final_followup(company_row, prior_block, on_profile)
     return f"""About {profile.NAME}:
 {on_profile}
 
@@ -51,6 +54,32 @@ Keep it concise: do NOT recite a full capabilities list, a multi-step "we advise
 we build" pitch, or a catalogue of tools — this is a light nudge, not a re-pitch.
 You may end with "Best,", but do NOT add a signature, sender name, or contact details
 — the sender's email client appends their own signature.
+{_voice_notes()}
+Then call `submit_followup`.
+"""
+
+
+def _final_followup(company_row, prior_block: str, on_profile: str) -> str:
+    """The second and LAST follow-up: very short — touch base, a link to the website,
+    a final low-key offer of a quick chat, and a clear sign-off that this is the last
+    time we'll reach out."""
+    return f"""About {profile.NAME}:
+{on_profile}
+
+We've emailed {company_row['name']} ({company_row['domain']}) twice (initial + one
+follow-up) with no reply. This is the SECOND and FINAL follow-up.
+
+{prior_block}
+
+Write a VERY SHORT, warm, no-pressure final note (about 40-70 words):
+  1. Briefly touch base with {company_row['name']} — make clear this is a last check-in
+     and that we won't keep emailing.
+  2. One line on what {profile.NAME} does, with a link to learn more: {profile.WEBSITE}
+     (include the URL in the body so it's clickable).
+  3. A final, low-key offer of a short chat whenever it's useful — and an easy out
+     ("no need to reply if the timing isn't right").
+Keep it genuinely short — NO capabilities list, no re-pitch. You may end with "Best,",
+but do NOT add a signature, sender name, or contact details.
 {_voice_notes()}
 Then call `submit_followup`.
 """

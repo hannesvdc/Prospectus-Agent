@@ -97,7 +97,8 @@ def refine_followups(client, conn, on_profile: str) -> list[dict]:
         if not existing:
             continue
         summary = {"name": row["name"], "domain": row["domain"], "refined": False}
-        result = drafting.draft_followup(client, conn, row, on_profile)
+        result = drafting.draft_followup(client, conn, row, on_profile,
+                                         final=followups.is_final(row))
         if result:
             db.update_email(conn, existing["id"],
                             subject=result.email_subject, body=result.email_body)

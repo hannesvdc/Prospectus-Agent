@@ -27,8 +27,20 @@ def business_days_since(start_iso: str, end: date | None = None) -> int:
 
 
 def is_due(row) -> bool:
-    """True if a 'sent' company row is past the follow-up threshold."""
+    """True if an awaiting company row is past the follow-up threshold."""
     return business_days_since(row["last_contact_date"]) >= config.FOLLOWUP_BUSINESS_DAYS
+
+
+def is_final(row) -> bool:
+    """True if the NEXT follow-up for this company is the second/final one — i.e. the
+    first follow-up was already sent (status 'followed_up'). Status 'sent' means the
+    first follow-up is next."""
+    return row["status"] == "followed_up"
+
+
+# Status after recording a sent follow-up: 'sent' -> 'followed_up' (1st done, await
+# final), 'followed_up' -> 'no_reply' (both done; terminal).
+_AFTER_SENT = {"sent": "followed_up", "followed_up": "no_reply"}
 
 
 def due_followup_emails(conn) -> list:
@@ -45,10 +57,10 @@ def due_followup_emails(conn) -> list:
 
 
 def mark_followups_sent(conn) -> list[dict]:
-    """Record that you've sent the due follow-ups: move each such company to
-    'followed_up' (a terminal state) so it's done — we send ONE follow-up, never
-    more, and it won't reappear in the due list. Only touches companies that
-    actually have a follow-up draft. Returns a summary list."""
+    """Record that you've sent the due follow-ups, advancing each one stage: a 1st
+    follow-up ('sent') -> 'followed_up' (clock restarts for the final one); a 2nd/final
+    follow-up ('followed_up') -> 'no_reply' (terminal — never followed up again). Only
+    touches companies that actually have a follow-up draft. Returns a summary list."""
     today = date.today().isoformat()
     marked = []
     for row in db.companies_awaiting_followup(conn):
@@ -56,8 +68,10 @@ def mark_followups_sent(conn) -> list[dict]:
             continue
         if not db.latest_email(conn, row["id"], "followup"):
             continue
-        db.set_status(conn, row["domain"], "followed_up", contact_date=today)
-        marked.append({"name": row["name"], "domain": row["domain"]})
+        nxt = _AFTER_SENT.get(row["status"], "no_reply")
+        db.set_status(conn, row["domain"], nxt, contact_date=today)
+        marked.append({"name": row["name"], "domain": row["domain"],
+                       "final": nxt == "no_reply"})
     return marked
 
 
@@ -74,6 +88,7 @@ def run_followups(client, conn, on_profile: str) -> list[dict]:
             "name": row["name"],
             "domain": row["domain"],
             "business_days": bdays,
+            "final": is_final(row),
             "drafted": False,
         }
 
@@ -83,7 +98,7 @@ def run_followups(client, conn, on_profile: str) -> list[dict]:
             flagged.append(entry)
             continue
 
-        result = drafting.draft_followup(client, conn, row, on_profile)
+        result = drafting.draft_followup(client, conn, row, on_profile, final=is_final(row))
         if result:
             db.add_email(conn, row["id"], type="followup",
                          subject=result.email_subject, body=result.email_body)
