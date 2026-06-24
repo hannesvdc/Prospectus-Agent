@@ -25,19 +25,19 @@ def _voice_notes() -> str:
 
 
 def _recent_innovations() -> str:
-    """Recent innovations (profile.recent_innovations) to surface in a follow-up as a
-    short 'here's what's new since we first wrote' beat — natural momentum, not a flat
-    list, and never overclaimed."""
+    """Recent wins/innovations (profile.recent_innovations) the follow-up draws its
+    momentum beat from. Pick ONE (the best fit), frame it as 'a few wins, including
+    [that one]' — never a list, never overclaimed."""
     if not profile.RECENT_INNOVATIONS:
         return ""
     items = "\n".join(f"  - {n}" for n in profile.RECENT_INNOVATIONS)
     return (
-        f"\nRecent progress at {profile.NAME} — weave ONE short, upbeat sentence (two "
-        "at most) into the follow-up framing these as exciting new developments SINCE "
-        "the first email (a fresh reason to re-engage), then connect them to the "
-        "recipient's work. Phrase it naturally as flowing prose, NOT as a "
-        "bulleted/comma list, and do NOT overclaim or invent metrics — present only "
-        f"what's listed:\n{items}\n")
+        f"\nRecent progress at {profile.NAME} to draw the win beat from — pick the ONE "
+        "that best fits this prospect and mention ONLY that one, framed as light "
+        'momentum since the first email (e.g. "since I wrote, we\'ve had a few '
+        'encouraging wins, including [that one]"). Do NOT list several, do NOT '
+        "overclaim or invent metrics, and present only what's listed:\n"
+        f"{items}\n")
 
 
 def build_user(company_row, prior_block: str, on_profile: str, final: bool = False) -> str:
@@ -45,6 +45,19 @@ def build_user(company_row, prior_block: str, on_profile: str, final: bool = Fal
     produces the short, last touch-base follow-up."""
     if final:
         return _final_followup(company_row, prior_block, on_profile)
+    if profile.RECENT_INNOVATIONS:
+        momentum_step = (
+            f"""3. Mention ONE encouraging recent win as light momentum, then ONE short,
+     warm bridge sentence to them — e.g. "Since I wrote, we've had a few encouraging
+     wins, including [one result from the recent-progress list below]. We'd love to do
+     the same for you." Pick just ONE win (do NOT list several), and keep the bridge to
+     a single short sentence — NOT a prescriptive paragraph diagnosing their problem or
+     spelling out exactly where we'd plug in.""")
+    else:
+        momentum_step = (
+            """3. Add ONE short, warm sentence on the value you'd love to bring them —
+     light and high-level (e.g. "we'd love to help you do the same"), NOT a prescriptive
+     paragraph diagnosing their problem or spelling out exactly where we'd plug in.""")
     return f"""About {profile.NAME}:
 {on_profile}
 
@@ -54,22 +67,19 @@ We emailed {company_row['name']} ({company_row['domain']}) on
 
 {prior_block}
 
-Write a SHORT, warm, low-pressure follow-up (about 100-140 words) in this shape:
-  1. Open by gently asking whether they had a chance to look at {profile.NAME} — name
-     {profile.NAME} explicitly and refer to the earlier note. e.g. "I was wondering
-     whether you'd had a chance to look at {profile.NAME}." Do NOT use throwaway
+Write a SHORT, warm, low-pressure follow-up (about 80-120 words) — use clean, punchy
+sentences, roughly one idea each — in this shape:
+  1. Open by gently asking whether they had a chance to look at {profile.NAME} after the
+     earlier note — name {profile.NAME} explicitly. e.g. "I was wondering whether you'd
+     had a chance to look at {profile.NAME} after my earlier note." Do NOT use throwaway
      openers like "just bumping", "just circling back", or "just following up".
   2. ONE short sentence recapping, at a high level, what {profile.NAME} does.
-  3. A short paragraph in the first person ("we") on how we could help with the
-     problem from the original note — concrete and value-oriented. Address them by
-     their COMPANY NAME ({company_row['name']}) — e.g. "For {company_row['name']}, we
-     can…" — NOT by an impersonal description of their field (avoid "For
-     biologically-aware generative AI,").
+  {momentum_step}
   4. Invite them to a short call, framed around SOLVING THEIR CHALLENGES — e.g. "I'd
      love to set up a quick call to dig into the challenges {company_row['name']} is
-     facing and where {profile.NAME} can help." Keep it warm and low-pressure, and
-     still make it easy to decline (e.g. "if this isn't a priority right now, no need
-     to reply").
+     facing and where {profile.NAME} can help." Keep it warm and low-pressure; you may
+     add a friendly closer like "Let me know how we can be of service!" and still make
+     it easy to decline.
 Keep it concise: do NOT recite a full capabilities list, a multi-step "we advise then
 we build" pitch, or a catalogue of tools — this is a light nudge, not a re-pitch.
 You may end with "Best,", but do NOT add a signature, sender name, or contact details

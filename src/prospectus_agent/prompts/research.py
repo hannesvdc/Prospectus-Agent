@@ -46,26 +46,30 @@ def _voice_notes_block() -> str:
 
 def _opening_step(opener_examples: str, voice_notes: str) -> str:
     """Step 1 of the email body. Two shapes, chosen by profile.OPENING_STYLE:
-    'problem' leads with a challenge common to teams like the prospect's, then
+    'problem' leads with a challenge inherent to the prospect's own work, then
     introduces the seller; anything else opens with a plain seller introduction."""
     if profile.OPENING_STYLE == "problem":
         return (
             f"""1. LEAD WITH THE PROBLEM, not with {profile.NAME}. Open by naming a
-           challenge that is TYPICAL of teams doing THIS prospect's kind of work —
-           framed as a recognizable pattern, NOT a claim about their specific internal
-           situation. Anchor it in their domain / products / workflows from your
-           research, and phrase it as something the reader will nod along to, e.g.
-           "For teams [doing X], [a typical challenge — long simulation campaigns,
-           slow design-iteration loops, uncertainty that's hard to quantify, results
-           that are hard to trust] often [becomes the bottleneck / slows every cycle]."
-           Keep it to a sentence or two. Stay at the level of "teams like yours often…"
-           — do NOT assert you know their internal stack, tools, or that they
-           specifically have this problem ("your pipeline is too slow"). Then, in ONE
-           short sentence, pivot to introduce {profile.NAME} as the team that helps
-           remove exactly that kind of bottleneck — a LIGHT, high-level intro of what
-           {profile.NAME} does and who it helps (draw on the brief and offerings above;
-           use the example opener(s) below for tone, but ADAPT them to land AFTER the
-           problem hook rather than as the first line).{opener_examples}{voice_notes}""")
+           challenge that is INHERENT to the prospect's OWN work — rooted in the
+           technical nature of what THEY specifically build, drawn from your research on
+           their actual products/workflows. Frame it as an intrinsic difficulty of that
+           work, spoken directly to them — NOT as a statistical pattern that lots of
+           similar companies share. Do NOT use generic-plurality framings like "teams
+           often…", "companies like yours frequently…", "the same bottleneck", or "many
+           teams run into…": in a niche field there may be only a handful of such
+           companies, so claiming a widespread pattern rings hollow and generic. Instead
+           tie the challenge to what THEIR work demands, e.g. "Building [their specific
+           product] means [challenge] gets harder exactly as [constraint — accuracy,
+           safety margins, latency, scale] gets tighter." Keep it to a sentence or two.
+           Do NOT claim to know their internal stack, tools, or that they specifically
+           have a problem ("your pipeline is too slow") — name the difficulty the work
+           itself imposes, not a diagnosis of their internals. Then, in ONE short
+           sentence, pivot to introduce {profile.NAME} as the team that helps with
+           exactly that — a LIGHT, high-level intro of what {profile.NAME} does and who
+           it helps (draw on the brief and offerings above; use the example opener(s)
+           below for tone, but ADAPT them to land AFTER the problem hook rather than as
+           the first line).{opener_examples}{voice_notes}""")
     return (
         f"""1. Open with a plain one-sentence introduction of {profile.NAME} and what it
            helps its audience do — e.g. "I'm reaching out to introduce {profile.NAME}.
@@ -92,7 +96,7 @@ def email_rules() -> str:
     return f"""    * email_subject: accurate, non-spammy, and framed around the AREAS {profile.NAME}
       helps with{areas} — NOT a guess about the prospect's specific product or internal
       applications. Name {profile.NAME}'s capability areas, not the prospect's use cases.
-    * email_body: ~120-160 words, never more than 200. A cold INTRODUCTION and offer
+    * email_body: ~90-130 words, never more than 160 — keep it short and skimmable. A cold INTRODUCTION and offer
       from an outside specialist — NOT an industry peer, and never "compare notes."
       Write the ENTIRE email as natural, flowing PROSE in SHORT paragraphs (2-3
       sentences each; keep it skimmable) — NO bullet points, numbered lists, or
@@ -101,28 +105,23 @@ def email_rules() -> str:
       {profile.NAME}. The numbered points below are instructions to you, not a format
       for the email. In order:
         {_opening_step(opener_examples, voice_notes)}
-        2. The "what's in it for them" paragraph — make it SPECIFIC, not generic.
-           From {profile.NAME}'s capability areas / offerings listed above, pick the
-           TWO that map most closely to THIS prospect's actual work, NAME those two
-           explicitly, and tie each to a concrete outcome. Anchor on the prospect's
-           SPECIFIC products, projects, or workflows from your research (not just their
-           industry), and where natural name the concrete METHOD within the capability
-           (a particular kind of simulation, model, solver, or analysis — e.g.
-           "transient conjugate-heat-transfer CFD", "a surrogate model of …",
-           "global sensitivity analysis"), not just the capability label. Write it
-           in the first person ("we") and address them by COMPANY NAME — e.g. "For
-           [their company], we can use [specific method from capability one] to
-           [specific outcome on their actual product/workflow], and [capability two]
-           to [specific outcome]." The reader should see exactly which two of our
-           capabilities fit them and why. Keep every claim truthful — don't invent
-           metrics, numbers, or internal details you can't ground in the research. AVOID broad, fluffy benefit lists that could apply to any company
-           ("faster turnaround, more confidence, cleaner paths") and do NOT cram in
-           more than two capabilities. Be CONFIDENT and direct ("we help teams like
-           yours do X", "we can use Y to Z") — do NOT hedge with phrasings like "we'd
-           most likely help", "we may be able to", or "that could mean". Ground it in
-           what they publicly do, but don't claim to know their internal stack — keep
-           any challenge framed as a pattern common to teams like them, never asserted
-           as a specific internal problem you've diagnosed.
+        2. The "what's in it for them" paragraph — SPECIFIC ABOUT US, LIGHT ABOUT THEM.
+           From {profile.NAME}'s capability areas / offerings listed above, pick the TWO
+           that fit this prospect best, NAME them, and where natural name the concrete
+           METHOD within each (e.g. "transient conjugate-heat-transfer CFD", "a surrogate
+           model", "global sensitivity analysis") — be confident and concrete about what
+           WE do. But stay LIGHT on THEIR side: connect those capabilities to their BROAD
+           area of work, NOT to a specific internal product, project, or workflow you've
+           guessed at. We do NOT know the details of their business and must not pretend
+           to — so do NOT prescribe exactly where in their pipeline we'd plug in, or
+           claim to know what they're working on. OFFER the capability and let THEM see
+           where it fits, e.g. "we help teams working on [their broad area] with
+           [capability + method]" rather than "for your [specific product] we'd do X to
+           your Y". Keep it to a sentence or two. AVOID broad, fluffy benefit lists that
+           could apply to any company ("faster turnaround, more confidence, cleaner
+           paths"), do NOT cram in more than two capabilities, and do NOT hedge ("we'd
+           most likely help", "we may be able to", "that could mean"). Keep every claim
+           truthful — don't invent metrics, numbers, or internal details.
         3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
            intro call), framed around the VALUE to them — e.g. "to see where we could
            help" or "to explore how {profile.NAME} could create value for your team".
