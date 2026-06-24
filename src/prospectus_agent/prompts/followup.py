@@ -24,6 +24,22 @@ def _voice_notes() -> str:
             f"NOT let them expand the follow-up into a full pitch):\n{notes}\n")
 
 
+def _recent_innovations() -> str:
+    """Recent innovations (profile.recent_innovations) to surface in a follow-up as a
+    short 'here's what's new since we first wrote' beat — natural momentum, not a flat
+    list, and never overclaimed."""
+    if not profile.RECENT_INNOVATIONS:
+        return ""
+    items = "\n".join(f"  - {n}" for n in profile.RECENT_INNOVATIONS)
+    return (
+        f"\nRecent progress at {profile.NAME} — weave ONE short, upbeat sentence (two "
+        "at most) into the follow-up framing these as exciting new developments SINCE "
+        "the first email (a fresh reason to re-engage), then connect them to the "
+        "recipient's work. Phrase it naturally as flowing prose, NOT as a "
+        "bulleted/comma list, and do NOT overclaim or invent metrics — present only "
+        f"what's listed:\n{items}\n")
+
+
 def build_user(company_row, prior_block: str, on_profile: str, final: bool = False) -> str:
     """`company_row` is a sqlite3.Row (name/domain/last_contact_date). `final=True`
     produces the short, last touch-base follow-up."""
@@ -38,7 +54,7 @@ We emailed {company_row['name']} ({company_row['domain']}) on
 
 {prior_block}
 
-Write a SHORT, warm, low-pressure follow-up (about 80-120 words) in this shape:
+Write a SHORT, warm, low-pressure follow-up (about 100-140 words) in this shape:
   1. Open by gently asking whether they had a chance to look at {profile.NAME} — name
      {profile.NAME} explicitly and refer to the earlier note. e.g. "I was wondering
      whether you'd had a chance to look at {profile.NAME}." Do NOT use throwaway
@@ -49,12 +65,16 @@ Write a SHORT, warm, low-pressure follow-up (about 80-120 words) in this shape:
      their COMPANY NAME ({company_row['name']}) — e.g. "For {company_row['name']}, we
      can…" — NOT by an impersonal description of their field (avoid "For
      biologically-aware generative AI,").
-  4. Make it easy to decline (e.g. "if this isn't a priority right now, no need to reply").
+  4. Invite them to a short call, framed around SOLVING THEIR CHALLENGES — e.g. "I'd
+     love to set up a quick call to dig into the challenges {company_row['name']} is
+     facing and where {profile.NAME} can help." Keep it warm and low-pressure, and
+     still make it easy to decline (e.g. "if this isn't a priority right now, no need
+     to reply").
 Keep it concise: do NOT recite a full capabilities list, a multi-step "we advise then
 we build" pitch, or a catalogue of tools — this is a light nudge, not a re-pitch.
 You may end with "Best,", but do NOT add a signature, sender name, or contact details
 — the sender's email client appends their own signature.
-{_voice_notes()}
+{_recent_innovations()}{_voice_notes()}
 Then call `submit_followup`.
 """
 

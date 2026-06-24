@@ -78,7 +78,7 @@ def test_copyable_recipient_line(conn, tmp_path):
     assert "<code>info@acme.com, jane.doe@acme.com</code>" in html
 
 
-def test_recipient_line_keeps_one_guess_per_person(conn, tmp_path):
+def test_recipient_line_includes_all_addresses(conn, tmp_path):
     today = date.today().isoformat()
     cid = db.upsert_company(
         conn, name="Acme", domain="acme.com", hq_location="", industry="X",
@@ -94,8 +94,9 @@ def test_recipient_line_keeps_one_guess_per_person(conn, tmp_path):
     md = (tmp_path / today / "new_prospects.md").read_text()
     # All format guesses are listed for the user to pick from...
     assert all(e in md for e in ("jane.doe@acme.com", "jdoe@acme.com", "janedoe@acme.com"))
-    # ...but the copyable To: line has public + only the top guess for that person.
-    assert "**To (copy):** `info@acme.com, jane.doe@acme.com`" in md
+    # ...and the copyable To: line now has EVERY unique address so the right guess lands.
+    assert ("**To (copy):** `info@acme.com, jane.doe@acme.com, "
+            "janedoe@acme.com, jdoe@acme.com`") in md
 
 
 def test_guessed_only_warns(conn, tmp_path):

@@ -33,6 +33,18 @@ company:
     - uncertainty quantification
     - HPC/GPU acceleration
     - computational advisory
+  # How the email opens. "problem" leads with a challenge common to teams doing the
+  # prospect's kind of work (framed as a pattern, not a diagnosis of their internals),
+  # then introduces your company. Omit or set "intro" to open with a plain one-line
+  # introduction of your company instead. Problem-led tends to suit consultative/
+  # services selling; intro-led suits a clear product.
+  opening_style: intro
+  # Optional: recent innovations/progress surfaced in FOLLOW-UP emails as a "here's
+  # what's new since we first wrote" beat — a fresh reason to re-engage. The drafter
+  # weaves these in as momentum (one or two sentences), not a flat list. Omit if none.
+  # recent_innovations:
+  #   - a new capability you just shipped
+  #   - something notable on your near-term roadmap
   # Business-specific framing dos/don'ts for the email body. This is where your
   # messaging lives (how to describe what you do, words to avoid) — the engine code
   # is otherwise business-agnostic. Each note is an instruction to the drafter.

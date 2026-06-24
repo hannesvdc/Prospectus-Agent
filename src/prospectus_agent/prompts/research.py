@@ -44,6 +44,38 @@ def _voice_notes_block() -> str:
             f"writing the email:\n{notes}")
 
 
+def _opening_step(opener_examples: str, voice_notes: str) -> str:
+    """Step 1 of the email body. Two shapes, chosen by profile.OPENING_STYLE:
+    'problem' leads with a challenge common to teams like the prospect's, then
+    introduces the seller; anything else opens with a plain seller introduction."""
+    if profile.OPENING_STYLE == "problem":
+        return (
+            f"""1. LEAD WITH THE PROBLEM, not with {profile.NAME}. Open by naming a
+           challenge that is TYPICAL of teams doing THIS prospect's kind of work —
+           framed as a recognizable pattern, NOT a claim about their specific internal
+           situation. Anchor it in their domain / products / workflows from your
+           research, and phrase it as something the reader will nod along to, e.g.
+           "For teams [doing X], [a typical challenge — long simulation campaigns,
+           slow design-iteration loops, uncertainty that's hard to quantify, results
+           that are hard to trust] often [becomes the bottleneck / slows every cycle]."
+           Keep it to a sentence or two. Stay at the level of "teams like yours often…"
+           — do NOT assert you know their internal stack, tools, or that they
+           specifically have this problem ("your pipeline is too slow"). Then, in ONE
+           short sentence, pivot to introduce {profile.NAME} as the team that helps
+           remove exactly that kind of bottleneck — a LIGHT, high-level intro of what
+           {profile.NAME} does and who it helps (draw on the brief and offerings above;
+           use the example opener(s) below for tone, but ADAPT them to land AFTER the
+           problem hook rather than as the first line).{opener_examples}{voice_notes}""")
+    return (
+        f"""1. Open with a plain one-sentence introduction of {profile.NAME} and what it
+           helps its audience do — e.g. "I'm reaching out to introduce {profile.NAME}.
+           We help [audience] with [a few of its capabilities]." Draw on the brief and
+           offerings above. Keep it LIGHT and high-level — a short sentence or two,
+           conversational, like the example opener(s) below.{opener_examples}
+           Do NOT open by recapping the prospect's own work, and do NOT diagnose their
+           needs (no "your work suggests you need…").{voice_notes}""")
+
+
 def email_rules() -> str:
     """The subject + body writing rules for an outreach email. Shared by the
     initial-draft prompt and the refine/redraft prompt so the two never drift.
@@ -68,13 +100,7 @@ def email_rules() -> str:
       everything around the outcomes and value they would get, not a feature tour of
       {profile.NAME}. The numbered points below are instructions to you, not a format
       for the email. In order:
-        1. Open with a plain one-sentence introduction of {profile.NAME} and what it
-           helps its audience do — e.g. "I'm reaching out to introduce {profile.NAME}.
-           We help [audience] with [a few of its capabilities]." Draw on the brief and
-           offerings above. Keep it LIGHT and high-level — a short sentence or two,
-           conversational, like the example opener(s) below.{opener_examples}
-           Do NOT open by recapping the prospect's own work, and do NOT diagnose their
-           needs (no "your work suggests you need…").{voice_notes}
+        {_opening_step(opener_examples, voice_notes)}
         2. The "what's in it for them" paragraph — make it SPECIFIC, not generic.
            From {profile.NAME}'s capability areas / offerings listed above, pick the
            TWO that map most closely to THIS prospect's actual work, NAME those two
@@ -94,14 +120,20 @@ def email_rules() -> str:
            more than two capabilities. Be CONFIDENT and direct ("we help teams like
            yours do X", "we can use Y to Z") — do NOT hedge with phrasings like "we'd
            most likely help", "we may be able to", or "that could mean". Ground it in
-           what they publicly do, but don't claim to know their internal stack or
-           diagnose their specific problems for them.
+           what they publicly do, but don't claim to know their internal stack — keep
+           any challenge framed as a pattern common to teams like them, never asserted
+           as a specific internal problem you've diagnosed.
         3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
            intro call), framed around the VALUE to them — e.g. "to see where we could
            help" or "to explore how {profile.NAME} could create value for your team".
-           Make it concrete and to the point; do NOT use vague, weak phrasings like
-           "to see whether there's a fit" or "if it would be useful". Keep it warm and
-           pressure-free, but the ask should sound purposeful.
+           Make it concrete and to the point. Do NOT use vague, weak phrasings like
+           "to see whether there's a fit" or "if it would be useful". Above all, do NOT
+           open the ask with a conditional that presupposes it might not be worth their
+           time — never start with "If it's useful,", "If that's helpful,", "If it
+           would be valuable,", or similar. State the ask directly (e.g. "I'd love to
+           set up a short intro call to explore where {profile.NAME} could create value
+           for your team"). Keep it warm and pressure-free, but the ask should sound
+           purposeful and assume the value is real.
       Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
       Do NOT add a signature, sender name, title, company, or contact details — the
       sender's email client appends their own on send."""

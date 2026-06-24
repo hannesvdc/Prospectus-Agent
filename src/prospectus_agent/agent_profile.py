@@ -70,6 +70,18 @@ CAPABILITY_AREAS = [str(a).strip() for a in (_company.get("capability_areas") or
 # where seller-specific messaging lives so the engine itself stays generic.
 VOICE_NOTES = [_clean(n) for n in (_company.get("voice_notes") or []) if str(n).strip()]
 
+# Optional opening style for the email body. "problem" leads with a challenge
+# common to teams doing the prospect's kind of work (framed as a pattern, not a
+# diagnosis), then introduces the seller; anything else (default "intro") opens
+# with a plain seller introduction. Per-profile, so one business can lead with the
+# client's problem while another stays product/intro-led.
+OPENING_STYLE = _clean(_company.get("opening_style", "")).lower() or "intro"
+
+# Optional recent product/research innovations to surface in FOLLOW-UP emails as a
+# "here's what's new since we first wrote" beat. List of short phrases; each is
+# collapsed to a tidy block. Empty list if unset (follow-ups then omit the beat).
+RECENT_INNOVATIONS = [_clean(n) for n in (_company.get("recent_innovations") or []) if str(n).strip()]
+
 # --- targeting -------------------------------------------------------------
 IDEAL_CUSTOMER = _clean(_req(_targeting, "targeting", "ideal_customer"))
 EXCLUDE_COMPETITORS = _clean(_req(_targeting, "targeting", "exclude_competitors"))
