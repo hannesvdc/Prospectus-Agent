@@ -78,7 +78,8 @@ prospectus-status --profile acme drafts   # review acme's drafts
 Set **`DEFAULT_PROFILE=acme`** in `.env` to make the bare `prospectus-agent`
 (no `--profile`) use that profile by default. The email *voice* is per-profile too —
 each `profile.*.yaml` carries its own `capability_areas`, `voice_notes`,
-`credibility`, and opener examples, so the engine itself stays business-agnostic.
+`credibility`, opener examples, and `recent_innovations` (recent wins woven into
+follow-ups as fresh momentum), so the engine itself stays business-agnostic.
 
 ## How it works
 
@@ -96,7 +97,8 @@ each `profile.*.yaml` carries its own `capability_areas`, `voice_notes`,
    short contact list (one inbox + a few senior people), and drafts a tailored email.
    The draft has **no sign-off/signature** — your mail client adds yours on send.
 4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
-   and drafts a gentle nudge.
+   and drafts a gentle nudge (two at most — a fuller first one that can weave in your
+   profile's `recent_innovations` as fresh momentum, then a short final touch-base).
 5. Writes `outbox/<date>/`, splitting **new prospect emails** (`new_prospects.md` /
    `.html`) from **follow-ups** (`followups.md` / `.html`) — each email with its
    contact list and a copyable comma-separated **To:** line, ready to paste. The HTML
@@ -112,17 +114,25 @@ fast), then regenerates the outbox. Contacts you've already curated are left unt
 
 Every company it ever sees (fits and non-fits) is stored, so none resurface.
 
-**Under the hood:** the work splits into two roles, each with its own **vendor +
-model** (Anthropic *or* OpenAI — mix freely):
+**Under the hood:** the work splits into two roles, and you point each at its **own
+model — even its own vendor** (Anthropic *or* OpenAI — mix freely). The point is to
+spend where it matters: a cheap model does the high-volume searching, a stronger one
+writes the (short) emails.
 
 - **Searcher** — discovery, per-company research, and profile refresh, using the
-  hosted `web_search` tool. Default: Anthropic `claude-haiku-4-5`.
-- **Writer** — drafts the actual emails (no web search; short output, so cheap even
-  on a stronger model). Default: Anthropic `claude-sonnet-4-6`.
+  hosted `web_search` tool. This is the bulk of the token spend, so a cheap model
+  pays off. Default: Anthropic `claude-haiku-4-5` — override with `SEARCH_VENDOR` /
+  `SEARCH_MODEL` (or `DISCOVERY_MODEL` to swap just the mechanical scoring step).
+- **Writer** — drafts *every* email: initial outreach, follow-ups, and `--refine`
+  rewrites. No web search and the output is short, so even a flagship model stays
+  cheap here. Default: Anthropic `claude-sonnet-4-6` — override with `WRITER_VENDOR`
+  / `WRITER_MODEL`.
 
-Both go through a single vendor-neutral `llm.py` seam (Anthropic Messages API or
-OpenAI Responses API, with structured output via strict tools). The
-boring-but-important bookkeeping (SQLite, dedup, follow-up timing) is plain Python.
+So an OpenAI searcher feeding a Claude writer (or any other split) is a one-line
+change in `.env`. Both roles go through a single vendor-neutral `llm.py` seam
+(Anthropic Messages API or OpenAI Responses API, with structured output via strict
+tools). The boring-but-important bookkeeping (SQLite, dedup, follow-up timing) is
+plain Python.
 
 ## Config dials (`.env`)
 
