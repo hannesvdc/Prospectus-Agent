@@ -145,6 +145,7 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
 
         raw = run_with_submit(
             client,
+            vendor=config.SEARCH_VENDOR,
             model=config.DISCOVERY_MODEL,
             system=discovery_prompts.system(),
             user_text=discovery_prompts.build_user(on_profile, deny, angle, avoid_labels),

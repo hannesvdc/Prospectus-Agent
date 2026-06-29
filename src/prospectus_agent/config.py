@@ -91,6 +91,7 @@ def _list(name: str) -> list[str]:
 
 # --- Secrets ---------------------------------------------------------------
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "").strip()
 
 # Cache file for the company brief fetched from the website (see on_profile.py).
 # Company identity / offerings / targeting live in profile.yaml (agent_profile.py).
@@ -101,19 +102,28 @@ BRIEF_CACHE = _path("BRIEF_CACHE", _profiled("company_brief_cache.json", "{p}_br
 # regardless of where you run the agent from.
 OUTBOX_DIR = _path("OUTBOX_DIR", _profiled("outbox", "outbox/{p}"))
 
-# --- Pipeline tunables -----------------------------------------------------
-# gpt-5.4-mini is ~6.6x cheaper than gpt-5.5 and plenty for scoring + short email
-# drafting. Bump to gpt-5.4 or gpt-5.5 if you find draft quality lacking.
-MODEL = (_raw("OPENAI_MODEL") or "gpt-5.4-mini").strip()
+# --- Models: vendor + model per task ---------------------------------------
+# The pipeline splits work into two roles, each with its own vendor + model:
+#   SEARCH  — the "searcher": discovery, per-company research, and profile refresh,
+#             all with the hosted web_search tool. A cheap model is plenty.
+#   WRITER  — the "writer": drafts the actual emails (no web search). Prose quality
+#             matters here; the output is short so the cost stays tiny.
+# Vendor is "anthropic" or "openai"; mix and match freely (e.g. OpenAI search +
+# Claude writing). Set the matching API key(s) for the vendors you choose.
+SEARCH_VENDOR = (_raw("SEARCH_VENDOR") or "anthropic").strip().lower()
+SEARCH_MODEL = (_raw("SEARCH_MODEL") or _raw("ANTHROPIC_MODEL") or "claude-haiku-4-5").strip()
+WRITER_VENDOR = (_raw("WRITER_VENDOR") or "anthropic").strip().lower()
+WRITER_MODEL = (_raw("WRITER_MODEL") or "claude-sonnet-4-6").strip()
+
+# Back-compat aliases: MODEL == the search model; DISCOVERY_MODEL may override it.
+MODEL = SEARCH_MODEL
+DISCOVERY_MODEL = (_raw("DISCOVERY_MODEL") or SEARCH_MODEL).strip()
 
 # --- Token / cost controls -------------------------------------------------
-# gpt-5.x reasoning effort: none|minimal|low|medium|high|xhigh. Lower = fewer
-# (hidden) reasoning tokens. Discovery/profile are mechanical -> low. Bump
-# DRAFTING_EFFORT to medium/high if email quality dips.
-DISCOVERY_MODEL = (_raw("DISCOVERY_MODEL") or MODEL).strip()  # e.g. a cheaper gpt-5-mini
+# Reasoning effort + search_context_size apply only to the OpenAI (Responses API)
+# backend. They are ignored by the Anthropic backend (Haiku 4.5 rejects effort).
 DISCOVERY_EFFORT = (_raw("DISCOVERY_EFFORT") or "low").strip()
 DRAFTING_EFFORT = (_raw("DRAFTING_EFFORT") or "low").strip()
-# How much web-search content the tool pulls into context: low|medium|high.
 SEARCH_CONTEXT_SIZE = (_raw("SEARCH_CONTEXT_SIZE") or "low").strip()
 DISCOVERY_MAX_TOKENS = _int("DISCOVERY_MAX_TOKENS", 8000)
 DRAFT_MAX_TOKENS = _int("DRAFT_MAX_TOKENS", 4000)
@@ -160,19 +170,32 @@ def size_allowed(size: str) -> bool:
     return size_rank(size) <= size_rank(MAX_COMPANY_SIZE)
 
 
-def require_api_key() -> str:
-    """Return the API key or raise a clear error if it is missing."""
-    if not OPENAI_API_KEY:
+_VENDOR_KEYS = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
+
+
+def require_api_key(vendor: str) -> str:
+    """Return the API key for `vendor` or raise a clear error if it is missing."""
+    vendor = vendor.lower()
+    key = {"anthropic": ANTHROPIC_API_KEY, "openai": OPENAI_API_KEY}.get(vendor)
+    if key is None:
+        raise RuntimeError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")
+    if not key:
+        env = _VENDOR_KEYS[vendor]
         raise RuntimeError(
-            "OPENAI_API_KEY is not set. Add it to the .env file "
-            "(see .env.example) before running steps that call the API."
+            f"{env} is not set. Add it to the .env file (see .env.example) before "
+            f"running steps that use the '{vendor}' vendor."
         )
-    return OPENAI_API_KEY
+    return key
 
 
-def get_client():
-    """Construct an OpenAI client. Imported lazily so non-API code paths
-    (e.g. the status CLI) work without the package configured."""
-    from openai import OpenAI
-
-    return OpenAI(api_key=require_api_key())
+def get_client(vendor: str):
+    """Construct the SDK client for `vendor`. Imported lazily so non-API code
+    paths (e.g. the status CLI) work without the package configured."""
+    vendor = vendor.lower()
+    if vendor == "anthropic":
+        from anthropic import Anthropic
+        return Anthropic(api_key=require_api_key("anthropic"))
+    if vendor == "openai":
+        from openai import OpenAI
+        return OpenAI(api_key=require_api_key("openai"))
+    raise RuntimeError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")

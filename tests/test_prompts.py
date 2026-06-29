@@ -55,15 +55,25 @@ def test_discovery_build_user_no_avoid_block_when_empty():
     assert "HARD EXCLUSION" not in out
 
 
-def test_research_build_user_includes_company_and_omits_signature():
+def test_draft_build_user_includes_company_and_omits_signature():
     cand = Candidate(name="Acme", domain="acme.com", industry="Aero",
                      why_fit="CFD", fit_score=9, suggested_applications=["GPU CFD"])
     out = rprompt.build_user(cand, "ON PROFILE")
     assert "Acme" in out and "acme.com" in out
-    assert "GPU CFD" in out
-    assert "submit_company_outreach" in out
+    assert "GPU CFD" in out  # falls back to candidate applications when no facts
+    assert "submit_email" in out
     # The model must NOT generate a sign-off; the user's client adds the signature.
     assert "Do NOT add a signature" in out
+
+
+def test_research_build_user_gathers_facts_only():
+    cand = Candidate(name="Acme", domain="acme.com", industry="Aero",
+                     why_fit="CFD", fit_score=9, suggested_applications=["GPU CFD"])
+    out = rprompt.build_research_user(cand, "ON PROFILE")
+    assert "submit_research" in out
+    assert "Acme" in out and "acme.com" in out
+    # The research step does NOT write the email.
+    assert "submit_email" not in out
 
 
 def test_research_build_user_includes_credibility(monkeypatch):

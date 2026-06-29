@@ -46,7 +46,8 @@ def refine_email(client, conn, email_row, on_profile: str) -> dict:
 
     raw = run_with_submit(
         client,
-        model=config.MODEL,
+        vendor=config.WRITER_VENDOR,
+        model=config.WRITER_MODEL,
         system=redraft_prompts.system(),
         user_text=redraft_prompts.build_user(
             company, on_profile, email_row["subject"], email_row["body"]

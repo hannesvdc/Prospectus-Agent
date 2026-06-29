@@ -14,10 +14,13 @@ from prospectus_agent.prompts.research import email_rules
 def system() -> str:
     return (
         f"You revise an existing cold outreach email for {profile.NAME} so it matches "
-        "the latest style guidance. Keep the factual, company-specific content already "
-        "in the draft — do NOT invent new facts, people, numbers, or claims about the "
-        "prospect, and do NOT add web research. Improve only wording, structure, tone, "
-        "and adherence to the rules. Return the revised email via `submit_refined_email`."
+        "the latest style guidance. Keep the genuine FACTS already in the draft (the "
+        "company name/domain, real people, any true specifics) and do NOT invent new "
+        "facts, people, numbers, or claims about the prospect, and do NOT add web "
+        "research. But the rules WIN over the existing wording: bring the draft into "
+        "full compliance — including generalizing away over-specific claims about the "
+        "prospect's own workflow or use cases, even when they are already in the draft. "
+        "Return the revised email via `submit_refined_email`."
     )
 
 
@@ -37,11 +40,13 @@ CURRENT DRAFT — subject:
 CURRENT DRAFT — body:
 {body}
 
-TASK: Rewrite this email so it fully follows the rules below, while preserving the
-factual, prospect-specific substance already present (the concrete value points,
-the company's domain, any genuine specifics). Don't research anything new and don't
-fabricate. If the current draft already complies, still return the best version of
-it. Return via `submit_refined_email` with these fields:
+TASK: Rewrite this email so it fully follows the rules below. Preserve only the
+genuine FACTS already present (the company's name/domain, real people, any true
+specifics) — don't research anything new and don't fabricate. The rules WIN over the
+existing wording: you SHOULD generalize away over-specific claims about the prospect's
+own workflow, internal use cases, or prescribed scenarios that the rules disallow,
+even when the current draft contains them. If the current draft already complies,
+still return the best version of it. Return via `submit_refined_email` with these fields:
 {email_rules()}
 - draft_notes: anything the sender should know before sending (or "").
 """

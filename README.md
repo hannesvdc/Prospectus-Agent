@@ -46,7 +46,7 @@ steer clear of. See `profile.example.yaml` for a fully worked example.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e ".[dev]"       # installs the package + the `prospectus-agent` command
-cp .env.example .env                    # then add your OPENAI_API_KEY
+cp .env.example .env                    # then add your ANTHROPIC_API_KEY (and/or OPENAI_API_KEY)
 cp profile.example.yaml profile.yaml    # then describe YOUR business + ideal customer
 ```
 
@@ -112,10 +112,17 @@ fast), then regenerates the outbox. Contacts you've already curated are left unt
 
 Every company it ever sees (fits and non-fits) is stored, so none resurface.
 
-**Under the hood:** the judgment calls (finding/scoring companies, drafting) use the
-OpenAI Responses API (default `gpt-5.4-mini` + the hosted `web_search` tool, with
-structured output via strict function tools). The boring-but-important bookkeeping
-(SQLite, dedup, follow-up timing) is plain Python, behind a single `llm.py` seam.
+**Under the hood:** the work splits into two roles, each with its own **vendor +
+model** (Anthropic *or* OpenAI — mix freely):
+
+- **Searcher** — discovery, per-company research, and profile refresh, using the
+  hosted `web_search` tool. Default: Anthropic `claude-haiku-4-5`.
+- **Writer** — drafts the actual emails (no web search; short output, so cheap even
+  on a stronger model). Default: Anthropic `claude-sonnet-4-6`.
+
+Both go through a single vendor-neutral `llm.py` seam (Anthropic Messages API or
+OpenAI Responses API, with structured output via strict tools). The
+boring-but-important bookkeeping (SQLite, dedup, follow-up timing) is plain Python.
 
 ## Config dials (`.env`)
 
@@ -124,17 +131,17 @@ knobs live here (gitignored):
 
 | Variable | Purpose |
 |---|---|
-| `OPENAI_API_KEY` | Your OpenAI API key (platform.openai.com) |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | API key(s) for the vendor(s) you use. Only the vendors named in `SEARCH_VENDOR` / `WRITER_VENDOR` need a key. |
 | `DEFAULT_PROFILE` | Business to run when no `--profile` is given (loads `profile.<name>.yaml` + `<name>.db` + `outbox/<name>/`). Omit to use the plain `profile.yaml` / `prospects.db` defaults. |
-| `OPENAI_MODEL` | Model id (default `gpt-5.4-mini` — cheap; `gpt-5.4` / `gpt-5.5` cost ~2× / ~6.6× more) |
+| `SEARCH_VENDOR` / `SEARCH_MODEL` | Vendor (`anthropic`\|`openai`) + model for the **searcher** (discovery, research, profile refresh, with web search). Default `anthropic` / `claude-haiku-4-5`. |
+| `WRITER_VENDOR` / `WRITER_MODEL` | Vendor + model for the **writer** (email drafting, no web search). Default `anthropic` / `claude-sonnet-4-6`. |
+| `DISCOVERY_MODEL` | Override the searcher model for the mechanical steps (profile + scoring) only; defaults to `SEARCH_MODEL`. |
 | `FIT_SCORE_THRESHOLD`, `TARGET_COMPANY_COUNT`, `MAX_DISCOVERY_CALLS`, `FOLLOWUP_BUSINESS_DAYS` | Pipeline tunables |
 | `MAX_PER_SECTOR` | Max picks from one sector per day (diversifier; default 2) |
 | `AVOID_SECTORS` | Comma-separated sector keys to exclude entirely (e.g. `aerospace_defense`). Avoided-but-qualified companies are kept as reversible backlog. Valid keys are in `sectors.py`. |
 | `MAX_COMPANY_SIZE` | Largest company size to target: `startup`\|`small`\|`mid`\|`large`\|`enterprise` (default `mid`). Bigger companies (e.g. multinationals like GM) are excluded. |
 | `MAX_PUBLIC_EMAILS` / `MAX_PEOPLE` / `GUESSES_PER_PERSON` | Contact-list size per company (default 1 generic inbox + 3 senior people, 1 address each). |
-| `DISCOVERY_EFFORT` / `DRAFTING_EFFORT` | Reasoning effort per step (`none`…`xhigh`; default `low`). Raise `DRAFTING_EFFORT` if email quality dips. |
-| `SEARCH_CONTEXT_SIZE` | How much web-search content enters context: `low`\|`medium`\|`high` (default `low`). Main per-call token lever. |
-| `DISCOVERY_MODEL` | Model for the mechanical steps (profile + scoring); defaults to `OPENAI_MODEL`. An even cheaper model (e.g. `gpt-5.4-nano`) is fine here. |
+| `DISCOVERY_EFFORT` / `DRAFTING_EFFORT` / `SEARCH_CONTEXT_SIZE` | OpenAI-backend only (reasoning effort + web-search context size); ignored on the Anthropic backend. |
 | `DISCOVERY_MAX_TOKENS` / `DRAFT_MAX_TOKENS` / `PROFILE_MAX_TOKENS` | Per-step output-token caps. |
 
 ## Daily use
@@ -182,8 +189,9 @@ Reply tracking is fully manual — the agent never reads your inbox.
 - **Garbage in, garbage out.** Lead quality tracks how well you describe your ideal
   customer in `profile.yaml`. Vague profile → mediocre leads. Spend ten minutes on it.
 - **Watch the cost line.** I burned through $5 in three runs before realising I was
-  using a flagship model for everything. The default is now a cheap model; the token-
-  usage summary at the end of each run is there so you notice early.
+  using a flagship model for everything. The defaults split the work — a cheap model
+  searches, a stronger one writes the (short) emails — and the token-usage summary at
+  the end of each run is there so you notice early.
 - **Read before you send.** It's good, not infallible — it's writing about companies
   it researched in seconds. Skim each draft. That's the whole point of "it never sends."
 - **It's single-user and local** (a SQLite file per business, your own inbox). It can
@@ -207,9 +215,10 @@ in `profile.yaml` (at the project root) and `prompts/`.
 | `agent_profile.py` | Loader for the active `profile.*.yaml` (your business + ICP — the thing you edit) |
 | `prompts/` | Prompt templates, one module per step — edit to change wording/tone |
 | `paths.py` | Resolves the project home + loads `.env` (before config computes paths) |
-| `config.py` | `.env` tunables, per-profile path resolution, OpenAI client |
+| `config.py` | `.env` tunables, per-profile path resolution, per-vendor client factory |
+| `runner.py` | Run prologue: validate keys, build the per-vendor client registry, open the DB |
 | `db.py` | SQLite layer (companies, contacts, emails) |
-| `llm.py` | OpenAI Responses API helpers (web_search + strict tool extraction) |
+| `llm.py` | Vendor-neutral LLM seam — Anthropic (Messages) / OpenAI (Responses), web_search + strict tool extraction |
 | `on_profile.py` | Company website-brief refresh (cached) |
 | `discovery.py` | The discovery loop + per-sector diversifier + backlog seeding |
 | `sectors.py` | Keyword sector classifier (powers the diversifier) |
@@ -227,7 +236,7 @@ in `profile.yaml` (at the project root) and `prompts/`.
 .venv/bin/python -m pytest
 ```
 
-The suite runs **offline** — the OpenAI client is faked, so no key and no spend. It
+The suite runs **offline** — both vendor clients are faked, so no key and no spend. It
 covers the database (dedup, status, contacts, follow-up timing), email-pattern
 guessing, business-day math, the discovery loop (including that competitors and
 over-size companies get filtered out), per-company research/drafting, the LLM helpers,

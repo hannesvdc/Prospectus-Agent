@@ -1,15 +1,31 @@
-"""Prompts for per-winner research + initial-email drafting."""
+"""Prompts for per-winner research + initial-email drafting.
+
+The pipeline runs in two model calls: a cheap searcher RESEARCHES the company
+(`research_system` + `build_research_user`), then a stronger writer DRAFTS the
+email from those facts (`draft_system` + `build_user`). `email_rules()` is shared
+so the drafting spec stays in one place.
+"""
 from __future__ import annotations
 
 from prospectus_agent import agent_profile as profile
 
 
-def system() -> str:
+def research_system() -> str:
     return (
-        f"You research a single prospect company for {profile.NAME} and draft a "
-        "tailored cold outreach email. You ground every claim in what you actually "
-        "find on the company's site and public sources — never fabricate facts, "
-        "people, or email addresses. If you can't verify something, leave it out."
+        f"You research a single prospect company for {profile.NAME}. You ground every "
+        "claim in what you actually find on the company's site and public sources — "
+        "never fabricate facts, people, or email addresses. If you can't verify "
+        "something, leave it out. You do NOT write the outreach email — you only "
+        "gather the facts another step will write from."
+    )
+
+
+def draft_system() -> str:
+    return (
+        f"You write a tailored cold outreach email for {profile.NAME} to one prospect, "
+        "using only the researched facts you are given. Never invent metrics, people, "
+        "or details beyond those facts. Write naturally and follow the email rules "
+        "exactly."
     )
 
 
@@ -117,10 +133,28 @@ def email_rules() -> str:
            claim to know what they're working on. OFFER the capability and let THEM see
            where it fits, e.g. "we help teams working on [their broad area] with
            [capability + method]" rather than "for your [specific product] we'd do X to
-           your Y". Keep it to a sentence or two. AVOID broad, fluffy benefit lists that
+           your Y". Describe ONLY what WE do — do NOT spell out a specific scenario,
+           mechanism, or end-result on THEIR side (e.g. "…to identify which combinations
+           hold up under [their conditions]"); that presumes to know and prescribe their
+           workflow. Name each capability ONCE in plain prose, and do NOT enumerate the
+           prospect's specific variables, quantities, sub-processes, or sub-properties —
+           NO list of their parameters in ANY form, whether comma-separated ("oxygen
+           transfer, thermal, and pH dynamics"; "temperature, aeration, and feeding
+           strategy"), dash-separated, or parenthetical; those read as a feature dump and
+           presume to know their internals. Stay general about their side; let the value
+           be obvious rather than spelled out.
+           WEAVE the capabilities into ONE flowing sentence tied to the OUTCOME. Do NOT
+           state, in ANY phrasing, HOW MANY capabilities you're offering — no "two
+           things", "two capabilities", "two areas", "a couple of things", "we bring
+           two...", "two things to the table", with or without a colon after it. Just
+           name them in natural prose. Name the company and connect what WE do to a broad
+           outcome for them, in the shape "For [Company], we can use [capability] and
+           [capability] to [broad outcome], then [capability] to [broad outcome]."
+           Keep it to a sentence or two. AVOID broad, fluffy benefit lists that
            could apply to any company ("faster turnaround, more confidence, cleaner
-           paths"), do NOT cram in more than two capabilities, and do NOT hedge ("we'd
-           most likely help", "we may be able to", "that could mean"). Keep every claim
+           paths"), do NOT cram in more than two capabilities, and NEVER tack a third
+           on as a separate "We also do X" sentence — two woven in, then stop. Do NOT
+           hedge ("we'd most likely help", "we may be able to", "that could mean"). Keep every claim
            truthful — don't invent metrics, numbers, or internal details.
         3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
            intro call), framed around the VALUE to them — e.g. "to see where we could
@@ -138,9 +172,9 @@ def email_rules() -> str:
       sender's email client appends their own on send."""
 
 
-def build_user(cand, on_profile: str) -> str:
-    """`cand` is a schemas.Candidate (duck-typed: name/domain/industry/why_fit/
-    suggested_applications)."""
+def build_research_user(cand, on_profile: str) -> str:
+    """Prompt for the RESEARCH step (cheap searcher + web_search). Returns facts via
+    `submit_research` — no email is written here. `cand` is a schemas.Candidate."""
     apps = "\n".join(f"- {a}" for a in cand.suggested_applications) or "(none yet)"
     return f"""About {profile.NAME}:
 {on_profile}
@@ -157,7 +191,7 @@ TWO key pages of {cand.domain} (an about/team or products page), and do at most 
 couple of focused searches for the company's senior people. That's enough — don't
 crawl the whole site. Confirm what they do and who leads engineering / R&D.
 
-STEP 2 — Return, via `submit_company_outreach`:
+STEP 2 — Return, via `submit_research` (facts only — do NOT write an email):
 - refined_applications: 2-4 specific, honest ways {profile.NAME} could help, tied to their real work.
 - public_emails: at most ONE generic inbox actually published on their site. Look for
   it on the contact/about page and in the site footer — common forms are
@@ -170,7 +204,30 @@ STEP 2 — Return, via `submit_company_outreach`:
   a name or an email. Include public_email ONLY if genuinely published, else null.
   Do NOT guess addresses (and never build one from a credential like ".phd@") — we
   generate guesses separately from the clean name.
-- A tailored initial email:
-{email_rules()}
 - draft_notes: anything the sender should know before sending.
+"""
+
+
+def build_user(cand, on_profile: str, facts=None) -> str:
+    """Prompt for the DRAFT step (writer, no web search). Writes the email from the
+    researched `facts` (a schemas.ResearchResult; falls back to the candidate's
+    preliminary applications when absent, e.g. in tests). Returns the email via
+    `submit_email`. `cand` is a schemas.Candidate."""
+    applications = list(getattr(facts, "refined_applications", None) or cand.suggested_applications)
+    apps = "\n".join(f"- {a}" for a in applications) or "(none yet)"
+    notes = getattr(facts, "draft_notes", "") or ""
+    notes_line = f"\nResearch notes: {notes}\n" if notes else ""
+    return f"""About {profile.NAME}:
+{on_profile}
+
+Prospect company: {cand.name}
+Website: {cand.domain}
+Industry: {cand.industry}
+Why we think they fit: {cand.why_fit}
+
+Researched ways {profile.NAME} could help this prospect (use these — they are
+already grounded in the company's real work):
+{apps}{notes_line}
+Write a tailored initial email and return it via `submit_email`:
+{email_rules()}
 """

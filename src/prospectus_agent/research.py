@@ -1,10 +1,13 @@
-"""Per-winner grounding + initial-email drafting.
+"""Per-winner grounding + initial-email drafting, in two model calls.
 
-For each qualified company we make ONE call that uses the hosted web_search tool
-(which can open/read pages) to research the company's own site and leadership,
-then returns (via a strict tool): refined applications, public emails, named
-senior people, and a tailored initial email. We then store contacts (public +
-pattern-guessed) and the email draft, and mark the company 'drafted'.
+1. RESEARCH (cheap searcher, config.MODEL, hosted web_search): reads the company's
+   site + leadership and returns grounded facts — refined applications, public
+   inboxes, named senior people, draft notes. No email is written here.
+2. DRAFT (writer, config.WRITER_MODEL, no web search): writes the tailored initial
+   email from those facts.
+
+We then store contacts (public + pattern-guessed) and the email draft, and mark
+the company 'drafted'.
 """
 from __future__ import annotations
 
@@ -14,11 +17,11 @@ from prospectus_agent import contacts as contacts_mod
 from prospectus_agent import db
 from prospectus_agent.llm import WEB_SEARCH_TOOL, function_tool, run_with_submit
 from prospectus_agent.prompts import research as research_prompts
-from prospectus_agent.schemas import Candidate, OutreachResult
+from prospectus_agent.schemas import Candidate, EmailDraft, ResearchResult
 
-SUBMIT_OUTREACH_TOOL = function_tool(
-    "submit_company_outreach",
-    "Submit researched contacts and the drafted initial email.",
+SUBMIT_RESEARCH_TOOL = function_tool(
+    "submit_research",
+    "Submit the researched, grounded facts about the company (no email).",
     {
         "refined_applications": {
             "type": "array",
@@ -47,54 +50,82 @@ SUBMIT_OUTREACH_TOOL = function_tool(
             },
             "description": "Senior / relevant people (leadership, R&D, engineering heads)",
         },
-        "email_subject": {"type": "string"},
-        "email_body": {"type": "string"},
         "draft_notes": {
             "type": "string",
             "description": "Brief notes for the sender (uncertainties, who to address, etc.)",
         },
     },
-    ["refined_applications", "public_emails", "people",
-     "email_subject", "email_body", "draft_notes"],
+    ["refined_applications", "public_emails", "people", "draft_notes"],
 )
 
+SUBMIT_EMAIL_TOOL = function_tool(
+    "submit_email",
+    "Submit the drafted initial email.",
+    {"email_subject": {"type": "string"}, "email_body": {"type": "string"}},
+    ["email_subject", "email_body"],
+)
+
+
 def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profile: str) -> dict:
-    """Research one winner, store contacts + draft, mark 'drafted'.
+    """Research one winner, draft the email, store contacts + draft, mark 'drafted'.
     Returns a summary dict for the run digest."""
+    summary = {"name": cand.name, "domain": cand.domain, "contacts": 0, "drafted": False}
+
+    # --- 1. Research (cheap searcher + web_search) -> grounded facts -----------
     raw = run_with_submit(
         client,
-        model=config.MODEL,
-        system=research_prompts.system(),
-        user_text=research_prompts.build_user(cand, on_profile),
-        tools=[WEB_SEARCH_TOOL, SUBMIT_OUTREACH_TOOL],
-        submit_tool_name="submit_company_outreach",
+        vendor=config.SEARCH_VENDOR,
+        model=config.SEARCH_MODEL,
+        system=research_prompts.research_system(),
+        user_text=research_prompts.build_research_user(cand, on_profile),
+        tools=[WEB_SEARCH_TOOL, SUBMIT_RESEARCH_TOOL],
+        submit_tool_name="submit_research",
+        max_output_tokens=config.DRAFT_MAX_TOKENS,
+        effort=config.DISCOVERY_EFFORT,
+    )
+    if not raw:
+        print(f"    ! no research result for {cand.name}")
+        return summary
+    try:
+        facts = ResearchResult.model_validate(raw)
+    except Exception as e:
+        print(f"    ! could not validate research for {cand.name}: {e}")
+        return summary
+
+    # --- 2. Draft (writer, no web search) -> email ----------------------------
+    raw_email = run_with_submit(
+        client,
+        vendor=config.WRITER_VENDOR,
+        model=config.WRITER_MODEL,
+        system=research_prompts.draft_system(),
+        user_text=research_prompts.build_user(cand, on_profile, facts),
+        tools=[SUBMIT_EMAIL_TOOL],
+        submit_tool_name="submit_email",
         max_output_tokens=config.DRAFT_MAX_TOKENS,
         effort=config.DRAFTING_EFFORT,
     )
-
-    summary = {"name": cand.name, "domain": cand.domain, "contacts": 0, "drafted": False}
-    if not raw:
-        print(f"    ! no outreach result for {cand.name}")
+    if not raw_email:
+        print(f"    ! no email draft for {cand.name}")
         return summary
-
     try:
-        result = OutreachResult.model_validate(raw)
+        email = EmailDraft.model_validate(raw_email)
     except Exception as e:
-        print(f"    ! could not validate outreach for {cand.name}: {e}")
+        print(f"    ! could not validate email for {cand.name}: {e}")
         return summary
 
+    # --- 3. Store contacts + draft --------------------------------------------
     n_contacts = 0
     # One (or few) generic public inbox(es).
-    for email in result.public_emails[:config.MAX_PUBLIC_EMAILS]:
-        email = email.strip()
-        if email:
+    for inbox in facts.public_emails[:config.MAX_PUBLIC_EMAILS]:
+        inbox = inbox.strip()
+        if inbox:
             db.add_contact(conn, company_id, name="", role="generic inbox",
-                           email=email, email_confidence="public")
+                           email=inbox, email_confidence="public")
             n_contacts += 1
 
     # Up to MAX_PEOPLE senior people: published address if found, else a capped
     # number of pattern guesses each.
-    for person in result.people[:config.MAX_PEOPLE]:
+    for person in facts.people[:config.MAX_PEOPLE]:
         published = person.public_email.strip() if person.public_email else ""
         # Reject "addresses" built from a credential/title (e.g. jeremy.phd@) —
         # treat as not-really-published and fall back to clean pattern guessing.
@@ -111,14 +142,14 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
                 n_contacts += 1
 
     db.add_email(conn, company_id, type="initial",
-                 subject=result.email_subject, body=result.email_body)
+                 subject=email.email_subject, body=email.email_body)
     db.set_status(conn, cand.domain, "drafted")
 
     summary.update(
         contacts=n_contacts,
         drafted=True,
-        subject=result.email_subject,
-        applications=result.refined_applications,
-        draft_notes=result.draft_notes,
+        subject=email.email_subject,
+        applications=facts.refined_applications,
+        draft_notes=facts.draft_notes,
     )
     return summary

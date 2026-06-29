@@ -1,6 +1,6 @@
-"""Sanity tests for the strict function-tool schemas and config helpers.
+"""Sanity tests for the strict tool schemas and config helpers.
 
-OpenAI strict function tools require every object's `required` to list all its
+Anthropic strict tools require every object's `required` to list all its
 properties and `additionalProperties: false`. A mismatch here would error at
 call time, so we catch it without an API call.
 """
@@ -31,20 +31,20 @@ def _assert_strict(schema, path="root"):
 
 @pytest.mark.parametrize("tool", [
     discovery.SUBMIT_CANDIDATES_TOOL,
-    research.SUBMIT_OUTREACH_TOOL,
+    research.SUBMIT_RESEARCH_TOOL,
+    research.SUBMIT_EMAIL_TOOL,
     drafting.SUBMIT_FOLLOWUP_TOOL,
 ])
-def test_submit_tool_is_valid_openai_function(tool):
-    # OpenAI Responses API function-tool shape.
-    assert tool.get("type") == "function"
-    assert tool.get("strict") is True
+def test_submit_tool_is_valid_neutral_tool(tool):
+    # Vendor-neutral tool spec (translated per vendor at call time).
+    assert tool.get("_neutral") == "function"
     assert "name" in tool and "description" in tool
-    assert "parameters" in tool and "input_schema" not in tool
-    _assert_strict(tool["parameters"], tool["name"])
+    assert "schema" in tool
+    _assert_strict(tool["schema"], tool["name"])
 
 
 def test_candidate_schema_includes_provider_and_size():
-    props = discovery.SUBMIT_CANDIDATES_TOOL["parameters"]["properties"]
+    props = discovery.SUBMIT_CANDIDATES_TOOL["schema"]["properties"]
     item_props = props["candidates"]["items"]["properties"]
     assert "is_service_provider" in item_props
     assert item_props["company_size"]["enum"] == [
@@ -67,6 +67,9 @@ def test_config_int_fallback():
 
 
 def test_require_api_key_raises_when_missing(monkeypatch):
+    monkeypatch.setattr(config, "ANTHROPIC_API_KEY", "")
+    with pytest.raises(RuntimeError):
+        config.require_api_key("anthropic")
     monkeypatch.setattr(config, "OPENAI_API_KEY", "")
     with pytest.raises(RuntimeError):
-        config.require_api_key()
+        config.require_api_key("openai")

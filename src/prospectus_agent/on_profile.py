@@ -50,6 +50,7 @@ def refresh_profile(client, *, force: bool = False) -> str:
     try:
         profile = run_text(
             client,
+            vendor=config.SEARCH_VENDOR,
             model=config.DISCOVERY_MODEL,
             system=on_profile_prompts.SYSTEM,
             user_text=on_profile_prompts.build_user(agent_profile.WEBSITE),
