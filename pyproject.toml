@@ -1,6 +1,6 @@
 [project]
 name = "prospectus-agent"
-version = "0.5.0"
+version = "0.6.0"
 description = "Daily AI agent that finds prospective clients and drafts tailored outreach emails."
 readme = "README.md"
 requires-python = ">=3.10"
