@@ -38,6 +38,26 @@ def _name_parts(full_name: str) -> tuple[str, str]:
     return _slug(tokens[0]), _slug(tokens[-1])
 
 
+# Cloudflare (and similar) hide addresses behind a placeholder like
+# "[email protected]" that only decodes via on-page JavaScript — the scraper/model
+# sees the placeholder, never the real address. Never store it.
+_OBFUSCATED_RE = re.compile(
+    r"\[email[\s ]*protected\]|/cdn-cgi/l/email-protection|__cf_email__", re.I)
+
+
+def is_real_email(email: str) -> bool:
+    """True if `email` is a genuine, storable address: exactly one '@', a non-empty
+    local part, a domain with a dot, not a credential-built local part
+    (jeremy.phd@), and not an obfuscation placeholder ([email protected])."""
+    e = (email or "").strip()
+    if not e or _OBFUSCATED_RE.search(e) or e.count("@") != 1:
+        return False
+    local, _, domain = e.partition("@")
+    if not local or "." not in domain:
+        return False
+    return not is_credentialed_local_part(e)
+
+
 def is_credentialed_local_part(email: str) -> bool:
     """True if the email's local-part contains an academic/professional credential
     as a dotted/dashed segment (e.g. "jeremy.phd@", "phd@", "dr.smith@"). Such an

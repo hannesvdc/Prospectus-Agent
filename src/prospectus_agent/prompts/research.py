@@ -116,11 +116,19 @@ def email_rules() -> str:
     return f"""    * email_subject: accurate, non-spammy, and framed around the AREAS {profile.NAME}
       helps with{areas} — NOT a guess about the prospect's specific product or internal
       applications. Name {profile.NAME}'s capability areas, not the prospect's use cases.
+      ALWAYS begin the subject with "{profile.NAME}" as the very first word(s), then the
+      capability framing, e.g. "{profile.NAME}: simulation & uncertainty quantification".
     * email_body: ~90-130 words, never more than 160 — keep it short and skimmable. A cold INTRODUCTION and offer
       from an outside specialist — NOT an industry peer, and never "compare notes."
       Write the ENTIRE email as natural, flowing PROSE in SHORT paragraphs (2-3
       sentences each; keep it skimmable) — NO bullet points, numbered lists, or
-      headings anywhere. Throughout, keep the focus on WHAT'S IN IT FOR THEM — frame
+      headings anywhere. Write in a genuine HUMAN voice, the way a real person types in
+      Gmail: use contractions (we're, you're, I'd), plain everyday words, and varied
+      sentence length. Do NOT use em dashes or en dashes anywhere (no "—" or "–"); use
+      commas, periods, or parentheses instead. Avoid corporate and AI clichés (e.g.
+      "leverage", "seamless", "robust", "cutting-edge", "delve", "unlock", "elevate",
+      "in today's landscape") and anything that reads like marketing copy rather than a
+      person. Throughout, keep the focus on WHAT'S IN IT FOR THEM — frame
       everything around the outcomes and value they would get, not a feature tour of
       {profile.NAME}. The numbered points below are instructions to you, not a format
       for the email. In order:
@@ -188,10 +196,15 @@ Why we think they fit: {cand.why_fit}
 Preliminary applications:
 {apps}
 
-STEP 1 — Research (keep it lean): open and read at most the homepage plus ONE or
-TWO key pages of {cand.domain} (an about/team or products page), and do at most a
-couple of focused searches for the company's senior people. That's enough — don't
-crawl the whole site. Confirm what they do and who leads engineering / R&D.
+STEP 1 — Research (stay lean, but DO hunt down the addresses): open the homepage,
+then the pages where contact details actually live — the CONTACT / "Contact us" page
+and the site FOOTER (published emails and generic inboxes are almost never on the
+landing page; they sit on the contact page or in the footer). Try the common paths
+directly if they aren't linked: {cand.domain}/contact, /contact-us, /about, /team.
+Also open an about/team page to see who leads engineering / R&D, and do a couple of
+focused searches for senior people — and, if no address turns up, a
+"{cand.name} contact email" search. ALWAYS check the contact page + footer before
+concluding no address is published. Don't crawl the whole site.
 
 STEP 2 — Return, via `submit_research` (facts only — do NOT write an email):
 - refined_applications: 2-4 specific, honest ways {profile.NAME} could help, tied to their real work.
@@ -199,11 +212,17 @@ STEP 2 — Return, via `submit_research` (facts only — do NOT write an email):
   it on the contact/about page and in the site footer — common forms are
   info@, contact@, hello@, sales@, support@, careers@/jobs@. Include it ONLY if you
   truly see it on the site; do NOT invent one. If none is published, return none.
+  IGNORE obfuscated placeholders like "[email protected]" (Cloudflare-protected
+  addresses) — that is NOT a real address; treat it as none.
 - people: the 3 most senior / relevant decision-makers (e.g. CEO, CTO, VP/Head of
-  Engineering or R&D) — no more than 3, with name + title. For the `name` field use
+  Engineering or R&D) — no more than 3, with name + title. ALWAYS find these named
+  people even if you already found a generic inbox above — a generic inbox NEVER
+  substitutes for real decision-makers; we reach out to people, not to info@. For the
+  `name` field use
   ONLY the person's actual first and last name — STRIP academic/professional titles
   and credentials (Dr, Prof, PhD, MD, MBA, MSc, P.Eng, etc.); never let them leak into
-  a name or an email. Include public_email ONLY if genuinely published, else null.
+  a name or an email. Include public_email ONLY if genuinely published, else null —
+  and if it shows only as "[email protected]" (Cloudflare-obfuscated), return null.
   Do NOT guess addresses (and never build one from a credential like ".phd@") — we
   generate guesses separately from the clean name.
 - draft_notes: anything the sender should know before sending.

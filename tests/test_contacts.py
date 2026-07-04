@@ -121,3 +121,24 @@ def test_apply_pattern_needs_surname_returns_empty():
 
 def test_infer_pattern_empty_known_returns_none():
     assert contacts.infer_pattern([], "acme.com") is None
+
+
+# --- is_real_email: reject obfuscation placeholders & malformed addresses ---
+
+def test_is_real_email_accepts_normal():
+    assert contacts.is_real_email("info@acme.com")
+    assert contacts.is_real_email("jane.doe@sub.acme.co.uk")
+
+
+def test_is_real_email_rejects_cloudflare_placeholder():
+    assert not contacts.is_real_email("[email protected]")
+    assert not contacts.is_real_email("[email protected]")
+
+
+def test_is_real_email_rejects_malformed():
+    for bad in ["", "  ", "notanemail", "no@domain", "two@@at.com", "@acme.com", "a@b"]:
+        assert not contacts.is_real_email(bad), bad
+
+
+def test_is_real_email_rejects_credentialed_local():
+    assert not contacts.is_real_email("jeremy.phd@acme.com")

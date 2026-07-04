@@ -10,7 +10,9 @@ def system() -> str:
     return (
         f"You write brief, courteous B2B follow-up emails for {profile.NAME}. "
         "Follow-ups are short, add a little new value or a gentle nudge, and never "
-        "guilt-trip. Never invent facts about the recipient's company."
+        "guilt-trip. Never invent facts about the recipient's company. "
+        "Write in a genuine human voice (contractions, plain everyday words), and never "
+        "use em dashes or en dashes; use commas or periods instead."
     )
 
 

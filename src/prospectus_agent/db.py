@@ -16,9 +16,28 @@ Status lifecycle for a company:
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from datetime import date
 from typing import Iterable, Optional
+
+# Em/en dashes are a classic "AI tell". Strip them from any email text before it's
+# stored, so every draft reads like a person typed it — the model is told not to use
+# them (prompts), and this guarantees it even when one slips through. A mid-sentence
+# dash becomes a comma; then we tidy any doubled punctuation the swap can create.
+_DASH_RE = re.compile(r"\s*[—–]\s*")
+
+
+def humanize_email_text(text: str) -> str:
+    """Remove em/en dashes from an email subject or body (dash -> comma), leaving no
+    typographic AI tell behind. Idempotent and safe on empty/None-ish input."""
+    if not text:
+        return text
+    text = _DASH_RE.sub(", ", text)
+    text = re.sub(r",\s*([,.;:!?])", r"\1", text)     # ", ." -> "."
+    text = re.sub(r"([.;:!?])\s*,\s*", r"\1 ", text)  # ". ," -> ". "
+    text = re.sub(r",\s*,", ", ", text)               # ",," -> ","
+    return text
 
 VALID_STATUSES = {
     "new",
@@ -256,6 +275,7 @@ def add_email(
     subject: str,
     body: str,
 ) -> int:
+    subject, body = humanize_email_text(subject), humanize_email_text(body)
     cur = conn.execute(
         "INSERT INTO emails (company_id, type, subject, body, created_at) VALUES (?, ?, ?, ?, ?)",
         (company_id, type, subject, body, date.today().isoformat()),
@@ -269,6 +289,7 @@ def update_email(
 ) -> bool:
     """Overwrite an existing draft's subject/body in place (used by refine).
     Returns True if a row was updated."""
+    subject, body = humanize_email_text(subject), humanize_email_text(body)
     cur = conn.execute(
         "UPDATE emails SET subject=?, body=? WHERE id=?",
         (subject, body, email_id),

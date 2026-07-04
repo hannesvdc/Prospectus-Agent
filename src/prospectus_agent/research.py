@@ -115,9 +115,9 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
 
     def _clean_published(person) -> str:
         pub = person.public_email.strip() if person.public_email else ""
-        # Reject "addresses" built from a credential/title (e.g. jeremy.phd@) —
-        # treat as not-really-published.
-        return "" if (pub and contacts_mod.is_credentialed_local_part(pub)) else pub
+        # Keep only a genuinely usable published address — drops credential-built
+        # locals (jeremy.phd@) and obfuscation placeholders ([email protected]).
+        return pub if contacts_mod.is_real_email(pub) else ""
 
     # Learn this domain's email format from the REAL personal addresses research
     # actually found, so we can build the ONE correct address for the others
@@ -196,7 +196,7 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
     if deliverable and not has_reliable_personal:
         for inbox in facts.public_emails[:config.MAX_PUBLIC_EMAILS]:
             inbox = inbox.strip()
-            if inbox:
+            if contacts_mod.is_real_email(inbox):  # skip [email protected] placeholders
                 db.add_contact(conn, company_id, name="", role="generic inbox",
                                email=inbox, email_confidence="public")
                 n_contacts += 1
