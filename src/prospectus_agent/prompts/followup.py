@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from prospectus_agent import agent_profile as profile
 from prospectus_agent import config
+from prospectus_agent.prompts import SIGNOFF_RULE
 
 
 def system() -> str:
@@ -78,12 +79,12 @@ sentences, roughly one idea each — in this shape:
   4. Invite them to a short call, framed around SOLVING THEIR CHALLENGES — e.g. "I'd
      love to set up a quick call to dig into the challenges {company_row['name']} is
      facing and where {profile.NAME} can help." Keep it warm and low-pressure; you may
-     add a friendly closer like "Let me know how we can be of service!" and still make
-     it easy to decline.
+     add a friendly closer like "Let me know how we can be of service!". Do NOT add an
+     apologetic opt-out line (e.g. "no worries if there's no time", "no need to reply if
+     you're busy", "if the timing isn't right") — a confident, warm ask, not an apology.
 Keep it concise: do NOT recite a full capabilities list, a multi-step "we advise then
 we build" pitch, or a catalogue of tools — this is a light nudge, not a re-pitch.
-You may end with "Best,", but do NOT add a signature, sender name, or contact details
-— the sender's email client appends their own signature.
+{SIGNOFF_RULE}
 {_recent_innovations()}{_voice_notes()}
 Then call `submit_followup`.
 """
@@ -106,10 +107,9 @@ Write a VERY SHORT, warm, no-pressure final note (about 40-70 words):
      and that we won't keep emailing.
   2. One line on what {profile.NAME} does, with a link to learn more: {profile.WEBSITE}
      (include the URL in the body so it's clickable).
-  3. A final, low-key offer of a short chat whenever it's useful — and an easy out
-     ("no need to reply if the timing isn't right").
-Keep it genuinely short — NO capabilities list, no re-pitch. You may end with "Best,",
-but do NOT add a signature, sender name, or contact details.
+  3. A final, low-key offer of a short chat whenever it's useful. Do NOT add an
+     apologetic opt-out line (e.g. "no worries if there's no time", "no need to reply").
+Keep it genuinely short — NO capabilities list, no re-pitch. {SIGNOFF_RULE}
 {_voice_notes()}
 Then call `submit_followup`.
 """

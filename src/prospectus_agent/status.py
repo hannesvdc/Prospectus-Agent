@@ -29,14 +29,12 @@ def _select_profile_early() -> None:
 
 _select_profile_early()
 
-from prospectus_agent import config  # noqa: E402  (after profile selection)
 from prospectus_agent import db  # noqa: E402
+from prospectus_agent import runner  # noqa: E402
 
 
 def _conn():
-    conn = db.connect(config.DB_PATH)
-    db.init_db(conn)
-    return conn
+    return runner.open_db()
 
 
 def cmd_list(args):

@@ -8,6 +8,7 @@ so the drafting spec stays in one place.
 from __future__ import annotations
 
 from prospectus_agent import agent_profile as profile
+from prospectus_agent.prompts import SIGNOFF_RULE
 
 
 def research_system() -> str:
@@ -80,12 +81,15 @@ def _opening_step(opener_examples: str, voice_notes: str) -> str:
            safety margins, latency, scale] gets tighter." Keep it to a sentence or two.
            Do NOT claim to know their internal stack, tools, or that they specifically
            have a problem ("your pipeline is too slow") — name the difficulty the work
-           itself imposes, not a diagnosis of their internals. Then, in ONE short
-           sentence, pivot to introduce {profile.NAME} as the team that helps with
-           exactly that — a LIGHT, high-level intro of what {profile.NAME} does and who
-           it helps (draw on the brief and offerings above; use the example opener(s)
-           below for tone, but ADAPT them to land AFTER the problem hook rather than as
-           the first line).{opener_examples}{voice_notes}""")
+           itself imposes, not a diagnosis of their internals. Keep this problem hook to
+           its OWN opening paragraph (one or two sentences), and STOP — do not introduce
+           {profile.NAME} yet.
+           THEN, IN A SEPARATE NEW PARAGRAPH, introduce {profile.NAME} as the team that
+           helps with exactly that — a LIGHT, high-level intro of what {profile.NAME}
+           does and who it helps, a sentence or two (draw on the brief and offerings
+           above; use the example opener(s) below for tone, but ADAPT them to land AFTER
+           the problem hook). The problem hook and the {profile.NAME} introduction MUST
+           be two SEPARATE paragraphs — never combine them into one.{opener_examples}{voice_notes}""")
     return (
         f"""1. Open with a plain one-sentence introduction of {profile.NAME} and what it
            helps its audience do — e.g. "I'm reaching out to introduce {profile.NAME}.
@@ -167,9 +171,7 @@ def email_rules() -> str:
            set up a short intro call to explore where {profile.NAME} could create value
            for your team"). Keep it warm and pressure-free, but the ask should sound
            purposeful and assume the value is real.
-      Use a neutral greeting ("Hi there,").{credibility_note} You may close with "Best,".
-      Do NOT add a signature, sender name, title, company, or contact details — the
-      sender's email client appends their own on send."""
+      Use a neutral greeting ("Hi there,").{credibility_note} {SIGNOFF_RULE}"""
 
 
 def build_research_user(cand, on_profile: str) -> str:

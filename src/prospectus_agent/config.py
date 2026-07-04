@@ -115,8 +115,7 @@ SEARCH_MODEL = (_raw("SEARCH_MODEL") or _raw("ANTHROPIC_MODEL") or "claude-haiku
 WRITER_VENDOR = (_raw("WRITER_VENDOR") or "anthropic").strip().lower()
 WRITER_MODEL = (_raw("WRITER_MODEL") or "claude-sonnet-4-6").strip()
 
-# Back-compat aliases: MODEL == the search model; DISCOVERY_MODEL may override it.
-MODEL = SEARCH_MODEL
+# DISCOVERY_MODEL may override the search model for the discovery step only.
 DISCOVERY_MODEL = (_raw("DISCOVERY_MODEL") or SEARCH_MODEL).strip()
 
 # --- Token / cost controls -------------------------------------------------
@@ -153,6 +152,18 @@ PROFILE_REFRESH_DAYS = _int("PROFILE_REFRESH_DAYS", 7)
 MAX_PUBLIC_EMAILS = _int("MAX_PUBLIC_EMAILS", 1)      # generic inboxes (info@/contact@)
 MAX_PEOPLE = _int("MAX_PEOPLE", 3)                    # named senior people
 GUESSES_PER_PERSON = _int("GUESSES_PER_PERSON", 1)    # guessed addresses per person
+
+# --- Email verification (Verifalia HTTP API, optional) ---------------------
+# Real mailbox verification via https://verifalia.com — used only for profiles
+# that opt in (profile YAML `settings.verify_emails: true`) AND when credentials
+# are set below. Free-tier "browser app" credentials are a username/password pair.
+VERIFALIA_USERNAME = (_raw("VERIFALIA_USERNAME") or "").strip()
+VERIFALIA_PASSWORD = (_raw("VERIFALIA_PASSWORD") or "").strip()
+# Cap verification calls per person (try candidate formats in order, keep the
+# first deliverable) so a bad domain can't burn the free tier. With pattern
+# inference the first candidate is usually right, so this mostly costs 1 credit
+# per person; 2 bounds the worst case for the free 25/day tier.
+VERIFY_MAX_CANDIDATES = _int("VERIFY_MAX_CANDIDATES", 2)
 FOLLOWUP_BUSINESS_DAYS = _int("FOLLOWUP_BUSINESS_DAYS", 5)
 DB_PATH = _path("DB_PATH", _profiled("prospects.db", "{p}.db"))
 

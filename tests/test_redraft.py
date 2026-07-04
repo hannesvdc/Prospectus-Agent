@@ -1,4 +1,4 @@
-"""Tests for the refine/redraft flow (run_with_submit stubbed)."""
+"""Tests for the refine/redraft flow (run_writer stubbed)."""
 from __future__ import annotations
 
 from datetime import date
@@ -35,7 +35,7 @@ def test_refine_email_rewrites_draft(conn, monkeypatch):
         "email_body": "Refined, prose-only body.",
         "draft_notes": "",
     }
-    monkeypatch.setattr(redraft, "run_with_submit", lambda *a, **k: payload)
+    monkeypatch.setattr(redraft, "run_writer", lambda *a, **k: payload)
 
     em = conn.execute("SELECT * FROM emails WHERE id=?", (eid,)).fetchone()
     summary = redraft.refine_email(None, conn, em, on_profile="ON")
@@ -50,7 +50,7 @@ def test_refine_email_rewrites_draft(conn, monkeypatch):
 
 def test_refine_email_keeps_draft_when_model_returns_nothing(conn, monkeypatch):
     _, eid = _drafted(conn, subject="Keep me", body="Keep body")
-    monkeypatch.setattr(redraft, "run_with_submit", lambda *a, **k: None)
+    monkeypatch.setattr(redraft, "run_writer", lambda *a, **k: None)
 
     em = conn.execute("SELECT * FROM emails WHERE id=?", (eid,)).fetchone()
     summary = redraft.refine_email(None, conn, em, on_profile="ON")
@@ -69,7 +69,7 @@ def test_refine_today_only_touches_initials(conn, monkeypatch):
         calls.append(k.get("user_text", ""))
         return {"email_subject": "R", "email_body": "R body", "draft_notes": ""}
 
-    monkeypatch.setattr(redraft, "run_with_submit", fake)
+    monkeypatch.setattr(redraft, "run_writer", fake)
     summaries = redraft.refine_today(None, conn, "ON", today=date.today().isoformat())
 
     # Only the single initial email was refined, not the follow-up.

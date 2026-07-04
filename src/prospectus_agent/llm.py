@@ -66,6 +66,22 @@ def function_tool(name: str, description: str, properties: dict, required: list[
     }
 
 
+def submit_email_tool(name: str, description: str, *,
+                      extra_properties: dict | None = None,
+                      extra_required: list[str] | None = None) -> dict:
+    """A submit-tool spec for handing back a drafted email — the `{email_subject,
+    email_body}` shape shared by the initial-draft, follow-up, and refine steps.
+    Pass `extra_properties`/`extra_required` for step-specific fields (e.g. redraft
+    adds `draft_notes`)."""
+    properties = {"email_subject": {"type": "string"}, "email_body": {"type": "string"}}
+    required = ["email_subject", "email_body"]
+    if extra_properties:
+        properties.update(extra_properties)
+    if extra_required:
+        required = required + list(extra_required)
+    return function_tool(name, description, properties, required)
+
+
 # --- usage accounting ------------------------------------------------------
 _USAGE = {"calls": 0, "input": 0, "output": 0, "cached": 0, "reasoning": 0}
 
@@ -284,6 +300,33 @@ def run_with_submit(
             tools=_to_openai_tools(tools), submit_tool_name=submit_tool_name,
             max_output_tokens=max_output_tokens, effort=effort)
     raise ValueError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")
+
+
+def run_writer(clients, *, system: str, user_text: str, tools: list,
+               submit_tool_name: str) -> Optional[dict]:
+    """`run_with_submit` pinned to the WRITER role (email drafting: initial, follow-up,
+    refine). Centralises the writer's vendor/model/effort/token policy so it's one edit,
+    not five."""
+    return run_with_submit(
+        clients, vendor=config.WRITER_VENDOR, model=config.WRITER_MODEL,
+        system=system, user_text=user_text, tools=tools,
+        submit_tool_name=submit_tool_name,
+        max_output_tokens=config.DRAFT_MAX_TOKENS, effort=config.DRAFTING_EFFORT)
+
+
+def run_searcher(clients, *, system: str, user_text: str, tools: list,
+                 submit_tool_name: str, model: Optional[str] = None,
+                 max_output_tokens: Optional[int] = None) -> Optional[dict]:
+    """`run_with_submit` pinned to the SEARCH role (discovery, per-company research,
+    all with web_search). Defaults to the research model/token budget; discovery
+    overrides `model`/`max_output_tokens` for its heavier rounds."""
+    return run_with_submit(
+        clients, vendor=config.SEARCH_VENDOR,
+        model=model or config.SEARCH_MODEL,
+        system=system, user_text=user_text, tools=tools,
+        submit_tool_name=submit_tool_name,
+        max_output_tokens=max_output_tokens or config.DRAFT_MAX_TOKENS,
+        effort=config.DISCOVERY_EFFORT)
 
 
 def run_text(

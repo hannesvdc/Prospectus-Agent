@@ -16,7 +16,6 @@ import sys
 from datetime import date
 
 from prospectus_agent import agent_profile
-from prospectus_agent import llm
 from prospectus_agent import on_profile
 from prospectus_agent import outbox
 from prospectus_agent import redraft
@@ -24,39 +23,31 @@ from prospectus_agent import runner
 
 
 def main() -> int:
-    print(f"{agent_profile.NAME} — refine today's drafts ({date.today().isoformat()})\n")
-
+    banner = f"{agent_profile.NAME} — refine today's drafts ({date.today().isoformat()})\n"
     try:
-        client, conn = runner.open_session()
+        with runner.session(banner) as (client, conn):
+            # Cached profile brief — no new web call unless the daily cache is stale.
+            profile_brief = on_profile.refresh_profile(client)
+
+            print("Refining today's drafts...")
+            summaries = redraft.refine_today(client, conn, profile_brief)
+
+            refined = [s for s in summaries if s["refined"]]
+            print(f"\nRefined {len(refined)}/{len(summaries)} draft(s).")
+            for s in refined:
+                print(f"  ● {s['name']} ({s['domain']})")
+                print(f"      subject: {s.get('subject', '')}")
+
+            if refined:
+                written = outbox.generate(conn, overwrite=True)
+                if written:
+                    out_dir, n = written
+                    print(f"\n✉  Regenerated {n} draft(s) in {out_dir}/ (new_prospects.md + .html).")
+            else:
+                print("\nNothing refined — outbox left unchanged.")
     except RuntimeError as e:
         print(f"ERROR: {e}")
         return 1
-
-    # Cached profile brief — no new web call unless the daily cache is stale.
-    profile_brief = on_profile.refresh_profile(client)
-
-    print("Refining today's drafts...")
-    summaries = redraft.refine_today(client, conn, profile_brief)
-
-    refined = [s for s in summaries if s["refined"]]
-    print(f"\nRefined {len(refined)}/{len(summaries)} draft(s).")
-    for s in refined:
-        print(f"  ● {s['name']} ({s['domain']})")
-        print(f"      subject: {s.get('subject', '')}")
-
-    if refined:
-        written = outbox.generate(conn, overwrite=True)
-        if written:
-            out_dir, n = written
-            print(f"\n✉  Regenerated {n} draft(s) in {out_dir}/ (new_prospects.md + .html).")
-    else:
-        print("\nNothing refined — outbox left unchanged.")
-
-    usage = llm.usage_summary()
-    if usage:
-        print(f"\n{usage}")
-
-    conn.close()
     return 0
 
 

@@ -55,23 +55,6 @@ class Person(BaseModel):
     )
 
 
-class OutreachResult(BaseModel):
-    """Research + drafted initial email for a single winning company. Retained for
-    back-compat; the pipeline now uses ResearchResult + EmailDraft separately."""
-
-    refined_applications: List[str] = Field(default_factory=list)
-    public_emails: List[str] = Field(
-        default_factory=list,
-        description="Generic public inboxes found (e.g. info@, contact@)",
-    )
-    people: List[Person] = Field(default_factory=list)
-    email_subject: str
-    email_body: str
-    draft_notes: str = Field(
-        default="", description="Anything the sender should know before sending"
-    )
-
-
 class ResearchResult(BaseModel):
     """Grounded facts about a winning company — the searcher's output. No email
     text: drafting is a separate step (see EmailDraft)."""

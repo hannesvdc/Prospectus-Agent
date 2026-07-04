@@ -21,7 +21,6 @@ from prospectus_agent import config
 from prospectus_agent import db
 from prospectus_agent import discovery
 from prospectus_agent import followups
-from prospectus_agent import llm
 from prospectus_agent import on_profile
 from prospectus_agent import outbox
 from prospectus_agent import research
@@ -66,45 +65,38 @@ def _print_digest(winners_summaries: list[dict], followup_summaries: list[dict])
 
 
 def main() -> int:
-    print(f"{agent_profile.NAME} prospecting agent — {date.today().isoformat()}\n")
-
+    banner = f"{agent_profile.NAME} prospecting agent — {date.today().isoformat()}\n"
     try:
-        client, conn = runner.open_session()
+        with runner.session(banner) as (client, conn):
+            emails_before = db.max_email_id(conn)  # so the outbox emits only THIS run's drafts
+
+            print(f"Refreshing {agent_profile.NAME} profile...")
+            profile = on_profile.refresh_profile(client)
+
+            print("\nDiscovering prospects...")
+            winners = discovery.discover(client, conn, profile)
+            print(f"\nQualified winners: {len(winners)} (target {config.TARGET_COMPANY_COUNT})")
+
+            print("\nResearching winners and drafting emails...")
+            winner_summaries = []
+            for company_id, cand in winners:
+                print(f"  ● {cand.name} ({cand.domain})")
+                winner_summaries.append(
+                    research.research_and_draft(client, conn, company_id, cand, profile))
+
+            print("\nChecking for follow-ups...")
+            followup_summaries = followups.run_followups(client, conn, profile)
+
+            _print_digest(winner_summaries, followup_summaries)
+
+            written = outbox.generate(conn, since_email_id=emails_before)
+            if written:
+                out_dir, n = written
+                print(f"\n✉  Wrote {n} draft(s) to {out_dir}/ (new_prospects.md / followups.md "
+                      "+ .html) — recipients + subject + body, ready to copy-paste.")
     except RuntimeError as e:
         print(f"ERROR: {e}")
         return 1
-
-    emails_before = db.max_email_id( conn )  # so the outbox emits only THIS run's drafts
-
-    print(f"Refreshing {agent_profile.NAME} profile...")
-    profile = on_profile.refresh_profile( client )
-
-    print("\nDiscovering prospects...")
-    winners = discovery.discover( client, conn, profile )
-    print(f"\nQualified winners: {len(winners)} (target {config.TARGET_COMPANY_COUNT})")
-
-    print("\nResearching winners and drafting emails...")
-    winner_summaries = []
-    for company_id, cand in winners:
-        print(f"  ● {cand.name} ({cand.domain})")
-        winner_summaries.append( research.research_and_draft(client, conn, company_id, cand, profile) )
-
-    print("\nChecking for follow-ups...")
-    followup_summaries = followups.run_followups( client, conn, profile )
-
-    _print_digest( winner_summaries, followup_summaries )
-
-    written = outbox.generate(conn, since_email_id=emails_before)
-    if written:
-        out_dir, n = written
-        print(f"\n✉  Wrote {n} draft(s) to {out_dir}/ (new_prospects.md / followups.md "
-              "+ .html) — recipients + subject + body, ready to copy-paste.")
-
-    usage = llm.usage_summary()
-    if usage:
-        print(f"\n{usage}")
-
-    conn.close()
     return 0
 
 

@@ -13,23 +13,19 @@ from __future__ import annotations
 
 from datetime import date
 
-from prospectus_agent import config
 from prospectus_agent import db
 from prospectus_agent import drafting
 from prospectus_agent import followups
-from prospectus_agent.llm import function_tool, run_with_submit
+from prospectus_agent.llm import run_writer, submit_email_tool
 from prospectus_agent.prompts import redraft as redraft_prompts
 
-SUBMIT_REFINED_TOOL = function_tool(
+SUBMIT_REFINED_TOOL = submit_email_tool(
     "submit_refined_email",
     "Submit the refined subject and body for an existing draft.",
-    {
-        "email_subject": {"type": "string"},
-        "email_body": {"type": "string"},
-        "draft_notes": {"type": "string",
-                        "description": "Brief notes for the sender (or empty string)."},
-    },
-    ["email_subject", "email_body", "draft_notes"],
+    extra_properties={"draft_notes": {
+        "type": "string",
+        "description": "Brief notes for the sender (or empty string)."}},
+    extra_required=["draft_notes"],
 )
 
 
@@ -44,18 +40,14 @@ def refine_email(client, conn, email_row, on_profile: str) -> dict:
     if company is None:
         return summary
 
-    raw = run_with_submit(
+    raw = run_writer(
         client,
-        vendor=config.WRITER_VENDOR,
-        model=config.WRITER_MODEL,
         system=redraft_prompts.system(),
         user_text=redraft_prompts.build_user(
             company, on_profile, email_row["subject"], email_row["body"]
         ),
         tools=[SUBMIT_REFINED_TOOL],  # no web_search — pure restyle
         submit_tool_name="submit_refined_email",
-        max_output_tokens=config.DRAFT_MAX_TOKENS,
-        effort=config.DRAFTING_EFFORT,
     )
     if not raw:
         print(f"    ! no refined result for {summary['name']}")

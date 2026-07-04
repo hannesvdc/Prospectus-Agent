@@ -23,7 +23,7 @@ from prospectus_agent import agent_profile as profile
 from prospectus_agent import config
 from prospectus_agent import db
 from prospectus_agent import sectors
-from prospectus_agent.llm import WEB_SEARCH_TOOL, function_tool, run_with_submit
+from prospectus_agent.llm import WEB_SEARCH_TOOL, function_tool, run_searcher
 from prospectus_agent.prompts import discovery as discovery_prompts
 from prospectus_agent.schemas import Candidate, DiscoveryResult
 
@@ -143,16 +143,14 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
         print(f"  Discovery round {round_idx + 1}/{config.MAX_DISCOVERY_CALLS} "
               f"({len(winners)}/{config.TARGET_COMPANY_COUNT} so far) — {angle.split('(')[0].strip()}")
 
-        raw = run_with_submit(
+        raw = run_searcher(
             client,
-            vendor=config.SEARCH_VENDOR,
-            model=config.DISCOVERY_MODEL,
             system=discovery_prompts.system(),
             user_text=discovery_prompts.build_user(on_profile, deny, angle, avoid_labels),
             tools=[WEB_SEARCH_TOOL, SUBMIT_CANDIDATES_TOOL],
             submit_tool_name="submit_candidates",
+            model=config.DISCOVERY_MODEL,
             max_output_tokens=config.DISCOVERY_MAX_TOKENS,
-            effort=config.DISCOVERY_EFFORT,
         )
         if not raw:
             print("    (no candidates returned this round)")

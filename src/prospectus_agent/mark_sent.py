@@ -19,6 +19,7 @@ from datetime import date
 from prospectus_agent import agent_profile
 from prospectus_agent import config
 from prospectus_agent import db
+from prospectus_agent import runner
 
 
 def mark_drafted_sent(conn) -> list[dict]:
@@ -34,8 +35,7 @@ def mark_drafted_sent(conn) -> list[dict]:
 
 
 def main() -> int:
-    conn = db.connect(config.DB_PATH)
-    db.init_db(conn)
+    conn = runner.open_db()
     marked = mark_drafted_sent(conn)
 
     if not marked:

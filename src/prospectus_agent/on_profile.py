@@ -33,12 +33,12 @@ def _fallback_profile() -> str:
     return f"{agent_profile.NAME} offers:\n{offerings}"
 
 
-def refresh_profile(client, *, force: bool = False) -> str:
+def refresh_profile(client) -> str:
     """Return a concise text brief of the seller company, refreshing from the
     website at most every PROFILE_REFRESH_DAYS days. Cached to BRIEF_CACHE."""
     today = date.today().isoformat()
 
-    if not force and os.path.exists(config.BRIEF_CACHE):
+    if os.path.exists(config.BRIEF_CACHE):
         try:
             with open(config.BRIEF_CACHE) as f:
                 cached = json.load(f)

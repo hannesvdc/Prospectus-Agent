@@ -48,38 +48,89 @@ def is_credentialed_local_part(email: str) -> bool:
     return any(seg in _SUFFIXES or seg in _HONORIFICS for seg in segments)
 
 
+def _local_candidates(first: str, last: str) -> list[tuple[str, str]]:
+    """(pattern_id, local_part) pairs for a name, most-likely first.
+
+    This ONE canonical list drives all three operations — blind guessing,
+    pattern *inference* from a known real address, and pattern *application* to
+    another name — so an inferred pattern always maps back to a format we can
+    build, and guessing/inference never drift apart.
+    """
+    if not first:
+        return []
+    fi = first[0]
+    if not last:
+        return [("first", first)]                 # jane
+    li = last[0]
+    return [
+        ("first.last", f"{first}.{last}"),         # jane.doe
+        ("filast",     f"{fi}{last}"),             # jdoe
+        ("firstlast",  f"{first}{last}"),          # janedoe
+        ("first",      first),                     # jane
+        ("fi.last",    f"{fi}.{last}"),            # j.doe
+        ("first_last", f"{first}_{last}"),         # jane_doe
+        ("firstli",    f"{first}{li}"),            # janed
+        ("last.first", f"{last}.{first}"),         # doe.jane
+        ("last",       last),                      # doe
+    ]
+
+
 def guess_emails(full_name: str, domain: str) -> list[str]:
     """Return likely email guesses for a person at a domain (most-likely first)."""
     first, last = _name_parts(full_name)
     domain = domain.strip().lower()
     if not domain or not first:
         return []
-
-    # Common corporate local-part formats, most-likely first. Capped per person by
-    # GUESSES_PER_PERSON downstream, so order matters.
-    fi = first[0]
-    patterns: list[str] = []
-    if last:
-        li = last[0]
-        patterns += [
-            f"{first}.{last}@{domain}",    # jane.doe@
-            f"{fi}{last}@{domain}",        # jdoe@
-            f"{first}{last}@{domain}",     # janedoe@
-            f"{first}@{domain}",           # jane@
-            f"{fi}.{last}@{domain}",       # j.doe@
-            f"{first}_{last}@{domain}",    # jane_doe@
-            f"{first}{li}@{domain}",       # janed@
-            f"{last}.{first}@{domain}",    # doe.jane@
-            f"{last}@{domain}",            # doe@
-        ]
-    else:
-        patterns.append(f"{first}@{domain}")               # jane@
-
     # De-dupe, preserve order.
     seen: set[str] = set()
     out: list[str] = []
-    for p in patterns:
-        if p not in seen:
-            seen.add(p)
-            out.append(p)
+    for _pid, local in _local_candidates(first, last):
+        addr = f"{local}@{domain}"
+        if addr not in seen:
+            seen.add(addr)
+            out.append(addr)
     return out
+
+
+def infer_pattern(known: list[tuple[str, str]], domain: str) -> str | None:
+    """Learn a domain's email format from REAL addresses it actually uses.
+
+    `known` is a list of (full_name, email) pairs that were genuinely published.
+    Returns the local-part `pattern_id` they follow (majority vote; ties break
+    toward the more common corporate format), or None if none match — e.g. the
+    only address is a generic inbox, or the formats disagree unrecognisably.
+    """
+    domain = domain.strip().lower()
+    priority = [pid for pid, _ in _local_candidates("first", "last")]
+    votes: dict[str, int] = {}
+    for name, email in known:
+        if not email or "@" not in email:
+            continue
+        local, _, dom = email.strip().lower().partition("@")
+        if dom != domain:
+            continue                       # a personal gmail etc. tells us nothing
+        first, last = _name_parts(name)
+        if not first:
+            continue
+        for pid, cand in _local_candidates(first, last):
+            if cand == local:
+                votes[pid] = votes.get(pid, 0) + 1
+                break                      # count the most-likely matching format
+    if not votes:
+        return None
+    # Most votes wins; tie -> earlier (more common) canonical format.
+    return max(votes, key=lambda p: (votes[p], -priority.index(p)))
+
+
+def apply_pattern(full_name: str, domain: str, pattern_id: str) -> str:
+    """Build the single address for a name using an inferred `pattern_id`.
+    Returns "" if the pattern can't be built for this name (e.g. it needs a
+    surname the person doesn't have)."""
+    first, last = _name_parts(full_name)
+    domain = domain.strip().lower()
+    if not domain or not first:
+        return ""
+    for pid, local in _local_candidates(first, last):
+        if pid == pattern_id:
+            return f"{local}@{domain}"
+    return ""

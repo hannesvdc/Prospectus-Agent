@@ -77,3 +77,47 @@ def test_is_credentialed_local_part_allows_real_addresses():
     assert not contacts.is_credentialed_local_part("jeremy.schrooten@acme.com")
     assert not contacts.is_credentialed_local_part("info@acme.com")
     assert not contacts.is_credentialed_local_part("jane.doe@acme.com")
+
+
+# --- pattern inference / application (learn a domain's format from real addresses) ---
+
+def test_infer_pattern_first_dot_last():
+    known = [("Jane Doe", "jane.doe@acme.com")]
+    assert contacts.infer_pattern(known, "acme.com") == "first.last"
+
+
+def test_infer_pattern_filast():
+    # dalpern@ for Dan Alpern -> {first-initial}{last}
+    known = [("Dan Alpern", "dalpern@batterystreak.com")]
+    assert contacts.infer_pattern(known, "batterystreak.com") == "filast"
+
+
+def test_infer_pattern_majority_vote():
+    known = [
+        ("Jane Doe", "jdoe@acme.com"),      # filast
+        ("Bob Smith", "bsmith@acme.com"),   # filast
+        ("Al Roe", "al.roe@acme.com"),      # first.last (outvoted)
+    ]
+    assert contacts.infer_pattern(known, "acme.com") == "filast"
+
+
+def test_infer_pattern_ignores_other_domains():
+    # a personal address on another domain tells us nothing about acme.com
+    known = [("Jane Doe", "jane.doe@gmail.com")]
+    assert contacts.infer_pattern(known, "acme.com") is None
+
+
+def test_infer_then_apply_builds_correct_address():
+    known = [("Dan Alpern", "dalpern@batterystreak.com")]
+    pat = contacts.infer_pattern(known, "batterystreak.com")
+    # apply the learned format to a different person on the same domain
+    assert contacts.apply_pattern("Randy Lowe", "batterystreak.com", pat) == "rlowe@batterystreak.com"
+
+
+def test_apply_pattern_needs_surname_returns_empty():
+    # "last.first" can't be built for a single-name person
+    assert contacts.apply_pattern("Cher", "acme.com", "last.first") == ""
+
+
+def test_infer_pattern_empty_known_returns_none():
+    assert contacts.infer_pattern([], "acme.com") is None

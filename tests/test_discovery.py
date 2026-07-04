@@ -38,7 +38,7 @@ def _stub_rounds(monkeypatch, rounds):
         except StopIteration:
             return None
 
-    monkeypatch.setattr(discovery, "run_with_submit", fake)
+    monkeypatch.setattr(discovery, "run_searcher", fake)
     return calls
 
 
@@ -168,7 +168,7 @@ def test_backlog_is_seeded_first_and_capped(conn, monkeypatch):
     # run_with_submit must NOT be called when there are no rounds.
     def boom(*a, **k):
         raise AssertionError("run_with_submit should not be called")
-    monkeypatch.setattr(discovery, "run_with_submit", boom)
+    monkeypatch.setattr(discovery, "run_searcher", boom)
 
     for i in range(3):
         db.upsert_company(conn, name=f"OldAv{i}", domain=f"oldav{i}.com", hq_location="",
@@ -207,7 +207,7 @@ def test_avoid_applies_to_backlog(conn, monkeypatch):
 
     def boom(*a, **k):
         raise AssertionError("no fresh rounds expected")
-    monkeypatch.setattr(discovery, "run_with_submit", boom)
+    monkeypatch.setattr(discovery, "run_searcher", boom)
 
     db.upsert_company(conn, name="OldAv", domain="oldav.com", hq_location="",
                       industry="Aviation", fit_score=9, why_fit="cfd",

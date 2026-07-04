@@ -63,7 +63,7 @@ def test_draft_build_user_includes_company_and_omits_signature():
     assert "GPU CFD" in out  # falls back to candidate applications when no facts
     assert "submit_email" in out
     # The model must NOT generate a sign-off; the user's client adds the signature.
-    assert "Do NOT add a signature" in out
+    assert "do NOT add a signature" in out
 
 
 def test_research_build_user_gathers_facts_only():

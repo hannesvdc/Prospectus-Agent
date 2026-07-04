@@ -31,6 +31,7 @@ def _load() -> tuple[dict, str]:
 _DATA, SOURCE = _load()
 _company = _DATA.get("company") or {}
 _targeting = _DATA.get("targeting") or {}
+_settings = _DATA.get("settings") or {}
 
 
 def _req(section: dict, section_name: str, key: str):
@@ -93,3 +94,8 @@ REGION = _clean(_targeting.get("region", "")) or config.TARGET_REGION
 
 # --- optional sector taxonomy override -------------------------------------
 SECTORS = _DATA.get("sectors")  # dict[bucket -> list[keyword]] or None (use default)
+
+# --- settings --------------------------------------------------------------
+# Opt in to real mailbox verification (Verifalia) for this profile. Needs
+# VERIFALIA_* credentials in .env to actually run; otherwise silently no-ops.
+VERIFY_EMAILS = bool(_settings.get("verify_emails", False))

@@ -28,9 +28,16 @@ from prospectus_agent import config
 from prospectus_agent import db
 
 
+_TRUSTED = ("public", "verified")  # published, or confirmed deliverable
+
+
 def _split_contacts(contacts):
-    public = [c for c in contacts if c["email_confidence"] == "public"]
-    guessed = [c for c in contacts if c["email_confidence"] == "guessed"]
+    # Trusted = a real published address or one confirmed deliverable by
+    # verification. Everything else (pattern-"inferred", blind-"guessed") is
+    # unverified and grouped together, each keeping its own tag so the sender can
+    # see how it was derived.
+    public = [c for c in contacts if c["email_confidence"] in _TRUSTED]
+    guessed = [c for c in contacts if c["email_confidence"] not in _TRUSTED]
     return public, guessed
 
 
@@ -136,8 +143,13 @@ def _email_block_html(conn, em) -> str | None:
 
     parts.append(f"<p><strong>Subject:</strong> {html.escape(em['subject'])}</p>")
     parts.append("<p><strong>Body</strong> (copy from here into Gmail):</p>")
-    parts.append(f'<div style="border:1px solid #ccc;padding:12px;'
-                 f'font-family:Arial,sans-serif">{_linkify_body(em["body"])}</div>')
+    # Outer div = a visual box to copy FROM (not part of the copied text). Inner div
+    # carries Gmail's default compose style (Arial / sans-serif, size "small"), so
+    # pasting the body into Gmail matches native text instead of a weird/oversized font.
+    parts.append(
+        '<div style="border:1px solid #ccc;padding:12px">'
+        '<div style="font-family:Arial,Helvetica,sans-serif;font-size:small;'
+        f'line-height:1.5;color:#222">{_linkify_body(em["body"])}</div></div>')
     parts.append("<hr>")
     return "\n".join(parts)
 
@@ -169,7 +181,9 @@ def _write_group(conn, out_dir, today, basename, title, emails, overwrite) -> in
     with open(html_path, "w" if html_fresh else "a") as f:
         if html_fresh:
             f.write(f'<!DOCTYPE html>\n<html><head><meta charset="utf-8">\n'
-                    f"<title>{title} — {today}</title></head>\n<body>\n"
+                    f"<title>{title} — {today}</title>\n"
+                    "<style>body{font-family:Arial,Helvetica,sans-serif;color:#222}</style>"
+                    f"</head>\n<body>\n"
                     f"<h1>{title} — {today}</h1>\n")
         f.write("\n".join(html_blocks) + "\n")
     return len(md_blocks)
