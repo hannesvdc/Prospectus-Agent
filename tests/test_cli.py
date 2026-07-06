@@ -91,13 +91,19 @@ def test_runall_dispatches_and_forwards_flags(monkeypatch):
     calls = []
     monkeypatch.setattr(
         "prospectus_agent.run_all.main",
-        lambda followup=False, refine=False, sent=False:
-            calls.append((followup, refine, sent)) or 0,
+        lambda followup=False, refine=False, sent=False, deliver=False, live=False:
+            calls.append((followup, refine, sent, deliver, live)) or 0,
     )
     assert cli.main(["--runall"]) == 0
     assert cli.main(["--runall", "--refine"]) == 0
     assert cli.main(["--runall", "--followup", "--sent"]) == 0
-    assert calls == [(False, False, False), (False, True, False), (True, False, True)]
+    assert cli.main(["--runall", "--deliver", "--live"]) == 0
+    assert calls == [
+        (False, False, False, False, False),
+        (False, True, False, False, False),
+        (True, False, True, False, False),
+        (False, False, False, True, True),
+    ]
 
 
 def test_runall_rejects_profile(monkeypatch):
@@ -154,3 +160,31 @@ def test_profile_flag_rejects_bad_name(monkeypatch):
     _isolate_env(monkeypatch)
     with pytest.raises(SystemExit):
         cli.main(["--profile", "../etc/passwd"])
+
+
+def test_deliver_routes_to_deliver_run(monkeypatch):
+    _isolate_env(monkeypatch)
+    calls = []
+    monkeypatch.setattr("prospectus_agent.daily_run.main", lambda: 0)
+    monkeypatch.setattr(
+        "prospectus_agent.deliver_run.main",
+        lambda followup=False, live=False: calls.append((followup, live)) or 0,
+    )
+    assert cli.main(["--deliver"]) == 0
+    assert cli.main(["--deliver", "--live"]) == 0
+    assert cli.main(["--followup", "--deliver"]) == 0
+    assert calls == [(False, False), (False, True), (True, False)]
+
+
+def test_deliver_rejects_conflicting_actions(monkeypatch):
+    _isolate_env(monkeypatch)
+    with pytest.raises(SystemExit):
+        cli.main(["--deliver", "--refine"])
+    with pytest.raises(SystemExit):
+        cli.main(["--deliver", "--sent"])
+
+
+def test_live_requires_deliver(monkeypatch):
+    _isolate_env(monkeypatch)
+    with pytest.raises(SystemExit):
+        cli.main(["--live"])

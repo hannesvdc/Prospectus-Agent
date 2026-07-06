@@ -28,7 +28,8 @@ def profile_names() -> list[str]:
     return names
 
 
-def main(followup: bool = False, refine: bool = False, sent: bool = False) -> int:
+def main(followup: bool = False, refine: bool = False, sent: bool = False,
+         deliver: bool = False, live: bool = False) -> int:
     names = profile_names()
     if not names:
         print("No business profiles found (looked for profile.<name>.yaml in "
@@ -36,7 +37,8 @@ def main(followup: bool = False, refine: bool = False, sent: bool = False) -> in
         return 0
 
     extra = (["--followup"] if followup else []) + \
-            (["--refine"] if refine else []) + (["--sent"] if sent else [])
+            (["--refine"] if refine else []) + (["--sent"] if sent else []) + \
+            (["--deliver"] if deliver else []) + (["--live"] if live else [])
     label = " ".join(extra) if extra else "daily pipeline"
     print(f"Running `{label}` for {len(names)} profile(s): {', '.join(names)}\n")
 

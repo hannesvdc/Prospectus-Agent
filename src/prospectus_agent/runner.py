@@ -6,11 +6,25 @@ cycle — config/db/llm all import config, which must not import them.)
 """
 from __future__ import annotations
 
+import os
+import shutil
 from contextlib import contextmanager
 
 from prospectus_agent import config
 from prospectus_agent import db
 from prospectus_agent import llm
+
+
+def _backup_db(db_path: str) -> None:
+    """Roll a fresh backup of the profile DB before a run — a one-file recovery
+    point for the last mutating command. Overwrites `<db_path>.bak`. Best-effort:
+    a backup failure (or no DB yet) never blocks the run. Gitignored (*.db.bak*)."""
+    if not db_path or db_path == ":memory:" or not os.path.exists(db_path):
+        return
+    try:
+        shutil.copy2(db_path, db_path + ".bak")
+    except OSError:
+        pass
 
 
 class Clients:
@@ -28,9 +42,14 @@ class Clients:
         return self._cache[vendor]
 
 
-def open_db():
+def open_db(*, backup: bool = False):
     """Open + initialise the active profile's database, returning the connection.
-    Shared by open_session() and the key-less commands (mark-sent, status CLI)."""
+    Shared by open_session() and the key-less commands (mark-sent, status CLI).
+    With backup=True, roll a `<db>.bak` snapshot first — the mutating commands pass
+    this; the read-only status CLI leaves it False so viewing never clobbers the
+    recovery point."""
+    if backup:
+        _backup_db(config.DB_PATH)
     conn = db.connect(config.DB_PATH)
     db.init_db(conn)
     return conn
@@ -38,12 +57,13 @@ def open_db():
 
 def open_session():
     """Validate API keys for the configured vendors, build the client registry,
-    open + initialise the active profile's database, and reset token accounting.
-    Returns (clients, conn). Raises RuntimeError if a needed key is missing."""
+    open + initialise the active profile's database (rolling a fresh backup first),
+    and reset token accounting. Returns (clients, conn). Raises RuntimeError if a
+    needed key is missing."""
     for vendor in {config.SEARCH_VENDOR, config.WRITER_VENDOR}:
         config.require_api_key(vendor)
     clients = Clients()
-    conn = open_db()
+    conn = open_db(backup=True)
     llm.reset_usage()
     return clients, conn
 

@@ -167,7 +167,10 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
             if verdict == "unknown" and fallback is None:
                 fallback = (addr, "guessed")  # transient/inconclusive — keep as backup
             # 'invalid' -> try the next candidate format
-        return [fallback] if fallback else []
+        # Verification confirmed nothing (all tried formats came back invalid/unknown).
+        # Fall back to the best guess rather than dropping the person — a guessed
+        # address is a lead to chase; "(no contacts found)" is a dead end.
+        return [fallback] if fallback else [(candidates[0], "guessed")]
 
     n_contacts = 0
     has_reliable_personal = False  # a confirmed/published/inferred address exists
@@ -200,6 +203,14 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
                 db.add_contact(conn, company_id, name="", role="generic inbox",
                                email=inbox, email_confidence="public")
                 n_contacts += 1
+
+    # Last resort: a deliverable company must never come out with ZERO contacts (e.g.
+    # no people found and no inbox published) — a guessed generic inbox beats
+    # "(no contacts found)".
+    if deliverable and n_contacts == 0:
+        db.add_contact(conn, company_id, name="", role="generic inbox",
+                       email=f"info@{cand.domain}", email_confidence="guessed")
+        n_contacts += 1
 
     db.add_email(conn, company_id, type="initial",
                  subject=email.email_subject, body=email.email_body)

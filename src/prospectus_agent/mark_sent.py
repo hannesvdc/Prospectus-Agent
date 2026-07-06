@@ -35,7 +35,7 @@ def mark_drafted_sent(conn) -> list[dict]:
 
 
 def main() -> int:
-    conn = runner.open_db()
+    conn = runner.open_db(backup=True)
     marked = mark_drafted_sent(conn)
 
     if not marked:
@@ -49,7 +49,7 @@ def main() -> int:
         print(f"   {m['date']}  {m['domain']}")
     print("\nThe follow-up clock now runs from those dates. Run `prospectus-agent` "
           f"(--profile {config.PROFILE or 'default'}) to draft follow-ups for any past "
-          f"the {config.FOLLOWUP_BUSINESS_DAYS}-business-day threshold.")
+          f"the {config.FOLLOWUP_DAYS}-day threshold.")
     conn.close()
     return 0
 

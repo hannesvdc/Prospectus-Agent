@@ -55,7 +55,7 @@ def _print_digest(winners_summaries: list[dict], followup_summaries: list[dict])
         print("  (none due)")
     for f in followup_summaries:
         status = "drafted" if f["drafted"] else f.get("note", "—")
-        print(f"  ● {f['name']} ({f['domain']}) — {f['business_days']} business days, {status}")
+        print(f"  ● {f['name']} ({f['domain']}) — {f['days']} days, {status}")
 
     print("\nNext steps:")
     print("  • Review drafts:   prospectus-status drafts   →   prospectus-status show DOMAIN")

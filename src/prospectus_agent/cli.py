@@ -4,6 +4,8 @@ CLI contract:
     prospectus-agent                       run the daily pipeline (discover + draft)
     prospectus-agent --refine              re-draft TODAY's emails with the current
                                            prompt (no new discovery or web research)
+    prospectus-agent --deliver             auto-send the in-scope drafts (dry-run;
+                                           add --live to really send)
     prospectus-agent --profile NAME        use a different business: loads
                                            profile.NAME.yaml + NAME.db + outbox/NAME/
                                            (combine with --refine)
@@ -62,6 +64,19 @@ def build_parser() -> argparse.ArgumentParser:
              "--followup = mark due follow-ups sent. Can't combine with --refine.",
     )
     parser.add_argument(
+        "--deliver",
+        action="store_true",
+        help="Action: actually SEND the in-scope drafts from your Gmail (initial drafts, "
+             "or due follow-ups with --followup), threading follow-ups under the original. "
+             "DRY-RUN by default (logs what would send); add --live to really send. "
+             "Can't combine with --refine/--sent.",
+    )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="With --deliver, actually send (default is a dry run that sends nothing).",
+    )
+    parser.add_argument(
         "--profile",
         metavar="NAME",
         help="Run a different business: loads profile.NAME.yaml, NAME.db, "
@@ -106,7 +121,8 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     # so the parent stays profile-agnostic (don't apply a profile or import config).
     if args.runall:
         from prospectus_agent import run_all
-        return run_all.main(followup=args.followup, refine=args.refine, sent=args.sent)
+        return run_all.main(followup=args.followup, refine=args.refine, sent=args.sent,
+                            deliver=args.deliver, live=args.live)
 
     # Importing paths loads .env (so DEFAULT_PROFILE is visible) and resolves HOME,
     # without yet computing config's path constants.
@@ -114,6 +130,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     profile = args.profile or os.getenv("DEFAULT_PROFILE")
     if profile:
         _apply_profile(profile, paths.HOME)
+
+    # `--deliver` is an action that spans both scopes (initial drafts, or follow-ups with
+    # --followup), so it dispatches ahead of the follow-up branch.
+    if args.deliver:
+        from prospectus_agent import deliver_run
+        return deliver_run.main(followup=args.followup, live=args.live)
 
     # `--followup` selects the follow-up SCOPE; `--refine`/`--sent` are modifiers that
     # act within it. Without `--followup` the same modifiers act on the initial drafts,
@@ -148,6 +170,13 @@ def _validate(args) -> None:
             "already sent it — marking a fresh re-draft as 'sent' would be wrong. "
             "Re-draft first, send it, then run --sent."
         )
+    if args.deliver and (args.refine or args.sent):
+        raise SystemExit(
+            "error: --deliver is its own action (it sends) and can't combine with "
+            "--refine or --sent. Re-draft/record separately."
+        )
+    if args.live and not args.deliver:
+        raise SystemExit("error: --live only applies to --deliver.")
 
 
 if __name__ == "__main__":

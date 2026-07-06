@@ -78,14 +78,28 @@ CREATE TABLE IF NOT EXISTS contacts (
 );
 
 CREATE TABLE IF NOT EXISTS emails (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    company_id INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-    type       TEXT NOT NULL,       -- 'initial' | 'followup'
-    subject    TEXT,
-    body       TEXT,
-    created_at TEXT NOT NULL
+    id               INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_id       INTEGER NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    type             TEXT NOT NULL,       -- 'initial' | 'followup'
+    subject          TEXT,
+    body             TEXT,
+    created_at       TEXT NOT NULL,
+    -- Delivery bookkeeping (set when auto-sent via --deliver; NULL until then):
+    rfc_message_id   TEXT,   -- the Message-ID header we generate (for threading follow-ups)
+    gmail_message_id TEXT,   -- id returned by the Gmail API on send
+    gmail_thread_id  TEXT,   -- thread id returned by the Gmail API (follow-ups reuse it)
+    sent_at          TEXT    -- ISO timestamp of the actual send
 );
 """
+
+# New columns added after the emails table first shipped. init_db() adds any that a
+# pre-existing DB is missing (CREATE TABLE IF NOT EXISTS won't alter an existing table).
+_EMAILS_ADDED_COLUMNS = {
+    "rfc_message_id": "TEXT",
+    "gmail_message_id": "TEXT",
+    "gmail_thread_id": "TEXT",
+    "sent_at": "TEXT",
+}
 
 
 def normalize_domain(raw: str) -> str:
@@ -109,7 +123,18 @@ def connect(db_path: str) -> sqlite3.Connection:
 
 def init_db(conn: sqlite3.Connection) -> None:
     conn.executescript(_SCHEMA)
+    _migrate_emails_columns(conn)
     conn.commit()
+
+
+def _migrate_emails_columns(conn: sqlite3.Connection) -> None:
+    """Add any delivery columns a pre-existing `emails` table is missing. Idempotent:
+    CREATE TABLE IF NOT EXISTS never alters an existing table, so older DBs
+    (open-numerics.db, reactionstudio.db) gain the columns here without a data migration."""
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(emails)")}
+    for column, coltype in _EMAILS_ADDED_COLUMNS.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE emails ADD COLUMN {column} {coltype}")
 
 
 # --- companies -------------------------------------------------------------
@@ -296,6 +321,40 @@ def update_email(
     )
     conn.commit()
     return cur.rowcount > 0
+
+
+def mark_email_sent(
+    conn: sqlite3.Connection,
+    email_id: int,
+    *,
+    rfc_message_id: str,
+    gmail_message_id: str,
+    gmail_thread_id: str,
+    sent_at: str,
+) -> None:
+    """Record that an email was delivered (via --deliver): store the Message-ID we
+    generated plus the ids the Gmail API returned, so follow-ups can thread and we
+    never double-send."""
+    conn.execute(
+        """UPDATE emails
+              SET rfc_message_id=?, gmail_message_id=?, gmail_thread_id=?, sent_at=?
+            WHERE id=?""",
+        (rfc_message_id, gmail_message_id, gmail_thread_id, sent_at, email_id),
+    )
+    conn.commit()
+
+
+def get_thread_refs(conn: sqlite3.Connection, company_id: int) -> Optional[sqlite3.Row]:
+    """The delivery refs of the company's INITIAL sent email (rfc_message_id,
+    gmail_thread_id, subject) so a follow-up can thread under it. None if the initial
+    email was never sent via --deliver (no refs to thread from)."""
+    return conn.execute(
+        """SELECT rfc_message_id, gmail_thread_id, subject
+             FROM emails
+            WHERE company_id=? AND type='initial' AND sent_at IS NOT NULL
+            ORDER BY id DESC LIMIT 1""",
+        (company_id,),
+    ).fetchone()
 
 
 def has_email_since(

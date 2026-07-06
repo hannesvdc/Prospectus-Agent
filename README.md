@@ -2,264 +2,181 @@
 
 *A little agent that does the part of running a business I'm worst at: finding people to email.*
 
-I run [Open Numerics](https://opennumerics.com), a small scientific-computing
-consultancy — simulation, uncertainty quantification, scientific ML, GPU/HPC. We're
-good at the work. We are not good at *prospecting*. Every week I'd lose a morning to
-it: open fifteen tabs, hunt for companies that might need us, get lost, give up,
-fire off three awkward cold emails, and then never follow up. I dreaded it, so I
-mostly just… didn't.
+I run [Open Numerics](https://opennumerics.com), a small scientific-computing consultancy.
+We're good at the work, not at *prospecting* — every week I'd lose a morning opening fifteen
+tabs, fire off three awkward cold emails, and never follow up. So I built this: each morning
+one command hands me a short list of companies that fit, each with a tailored draft I skim and
+send from my own inbox. The worst hour of my week became five minutes over coffee.
 
-So I built this. Each morning I run one command and it hands me a short list of
-companies that actually fit, each with a tailored draft email I can skim and send
-from my own inbox. It turned the worst hour of my week into five minutes over coffee.
-
-Then I realised nothing in it was really about *me* or my business per se. I pulled all the
-Open-Numerics-specific bits into a single config file. Now it's a tool anyone can
-point at their own business. (The example config that ships with it is Open Numerics;
-swap in your own.)
+Nothing in it is specific to me — the business-specific bits live in one config file, so you can
+point it at your own. (It ships configured for Open Numerics; swap in yours.)
 
 ## What it does
 
-- Every run, it **searches the web for companies that fit your business**, scores
-  them for fit, spreads them across sectors, and skips anyone you've already seen —
-  no re-surfacing the same names, no bloated lead list to pay for.
-- It **reads each company before writing**, so the draft talks about *their* actual
-  work and concrete ways you could help — not mail-merge filler.
-- It keeps a small local database of who you've contacted and **nudges you to follow
-  up** when a thread goes quiet (that's where most replies come from, and it's the
-  bit I always forgot).
-- It **never sends anything.** You get copy-paste-ready drafts and send from your own
-  inbox, in your own voice. I did that on purpose — I don't trust any robot, this one
-  included, to email strangers for me.
-- It runs on a cheap model for **pennies a day**, not a monthly sales-SaaS seat.
-
-The honest pitch: it turns *"spend a morning hunting for leads and writing cold
-emails"* into *"skim a few tailored drafts over coffee and hit send."*
+- **Finds fitting companies** — searches the web each run, scores for fit, spreads picks across
+  sectors, and skips anyone you've already seen. No bloated lead list to pay for.
+- **Reads before writing** — the draft talks about *their* actual work, in a plain human voice
+  (no mail-merge filler, no AI tells).
+- **Finds the right person's real email**, not a generic `info@` — checks the contact page and
+  footer, infers the company's address format from a real address and applies it, and optionally
+  verifies deliverability. One best address per senior person.
+- **Nudges you to follow up** when a thread goes quiet (that's where most replies come from).
+- **Never sends anything** — you get copy-paste-ready drafts and send from your own inbox. I
+  don't trust any robot, this one included, to email strangers for me.
+- Runs on a cheap model for **pennies a day**, not a monthly sales-SaaS seat.
 
 ## Make it yours
 
-You don't edit code. You write one file — **`profile.yaml`** — describing your
-business and who you want to reach: what you sell, who's a good fit, who to *exclude*
-(competitors who do what you do), which industries to focus on, and which giants to
-steer clear of. See `profile.example.yaml` for a fully worked example.
+You don't edit code — you write one file, **`profile.yaml`**: what you sell, who's a good fit,
+who to *exclude* (competitors), which industries to focus on, which giants to avoid. See
+`profile.example.yaml` for a worked example.
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -e ".[dev]"       # installs the package + the `prospectus-agent` command
-cp .env.example .env                    # then add your ANTHROPIC_API_KEY (and/or OPENAI_API_KEY)
-cp profile.example.yaml profile.yaml    # then describe YOUR business + ideal customer
+.venv/bin/pip install -e ".[dev]"       # package + the `prospectus-agent` command
+cp .env.example .env                    # add your ANTHROPIC_API_KEY (and/or OPENAI_API_KEY)
+cp profile.example.yaml profile.yaml    # describe your business + ideal customer
 ```
 
-That's the whole setup. If `profile.yaml` is missing, it falls back to the example
-so a fresh clone still runs.
+That's the whole setup (if `profile.yaml` is missing, the example is used). The install puts
+`prospectus-agent` on your PATH and resolves its files relative to the project folder, so you can
+run it from any directory — point `PROSPECTUS_AGENT_HOME` elsewhere to relocate them. Prompt
+templates live in `src/prospectus_agent/prompts/`; edit only to change wording/tone.
 
-The editable install puts a **`prospectus-agent`** command on your venv's PATH, and
-the agent resolves its files (`.env`, `profile.yaml`, the db, the outbox) relative to
-the project folder — so **you can run it from any directory**. To keep the project
-files somewhere else, point `PROSPECTUS_AGENT_HOME` at that folder.
-
-> **Two layers of "template":** `profile.yaml` is the *content* (your business — what
-> you'll edit). `src/prospectus_agent/prompts/` holds the actual *prompt templates* —
-> one small Python module per step. Only touch it to change the wording or tone of
-> what the agent asks the model.
-
-### Running more than one business
-
-One install can serve several businesses, each fully isolated. A profile named
-`acme` lives in **`profile.acme.yaml`** and gets its own database (`acme.db`),
-outbox (`outbox/acme/`), and website-brief cache — so leads, status, and drafts
-never mix between businesses:
-
-```bash
-prospectus-agent --profile acme           # discover + draft for "acme"
-prospectus-status --profile acme drafts   # review acme's drafts
-```
-
-Set **`DEFAULT_PROFILE=acme`** in `.env` to make the bare `prospectus-agent`
-(no `--profile`) use that profile by default. The email *voice* is per-profile too —
-each `profile.*.yaml` carries its own `capability_areas`, `voice_notes`,
-`credibility`, opener examples, and `recent_innovations` (recent wins woven into
-follow-ups as fresh momentum), so the engine itself stays business-agnostic.
+**More than one business:** a profile named `acme` lives in `profile.acme.yaml` with its own
+`acme.db`, `outbox/acme/`, and brief cache — fully isolated. Run `prospectus-agent --profile
+acme`, or set `DEFAULT_PROFILE=acme` in `.env`. Each profile carries its own voice
+(`capability_areas`, `voice_notes`, `credibility`, opener examples, `recent_innovations`), so the
+engine stays business-agnostic.
 
 ## How it works
 
 `prospectus-agent` runs the pipeline:
 
-1. **Refresh profile** — fetches your company's website (cached; default weekly via
-   `PROFILE_REFRESH_DAYS`) so drafts reflect what you currently do.
-2. **Discover** — up to `MAX_DISCOVERY_CALLS` web-search rounds (default 2) to find
-   up to `TARGET_COMPANY_COUNT` companies (default 5) scoring ≥ `FIT_SCORE_THRESHOLD`/10,
-   rotating the industry angle each round (with a per-day offset) and skipping
-   anything already in the DB. A **diversifier** caps how many picks share one sector
-   (`MAX_PER_SECTOR`, default 2) so a single sector can't take over the list;
-   good-but-capped companies become a backlog that future runs draft first.
-3. **Research + draft** — for each winner it reads the site + leadership, stores a
-   short contact list (one inbox + a few senior people), and drafts a tailored email.
-   The draft has **no sign-off/signature** — your mail client adds yours on send.
-4. **Follow-ups** — flags anyone marked `sent` with no reply after five business days
-   and drafts a gentle nudge (two at most — a fuller first one that can weave in your
-   profile's `recent_innovations` as fresh momentum, then a short final touch-base).
-5. Writes `outbox/<date>/`, splitting **new prospect emails** (`new_prospects.md` /
-   `.html`) from **follow-ups** (`followups.md` / `.html`) — each email with its
-   contact list and a copyable comma-separated **To:** line, ready to paste. The HTML
-   version turns every mention of your company's name into a real link, so pasting
-   from a browser into Gmail keeps the hyperlinks. Running again the same day
-   **appends** the new drafts rather than overwriting, so earlier drafts (and any
-   notes you added) are kept.
-6. Prints a digest and a token-usage line so you can see what the run cost.
+1. **Refresh profile** — fetches your website (cached weekly via `PROFILE_REFRESH_DAYS`) so
+   drafts reflect what you do now.
+2. **Discover** — up to `MAX_DISCOVERY_CALLS` web-search rounds for companies scoring ≥
+   `FIT_SCORE_THRESHOLD`/10, rotating the industry angle and skipping anything already seen. A
+   diversifier caps picks per sector (`MAX_PER_SECTOR`); good-but-capped companies wait in a
+   backlog that future runs draft first.
+3. **Research + draft** — reads the site (contact page + footer, where addresses live) and
+   leadership, then builds **one best email per senior person**: a published one if found, else
+   the domain's inferred format applied, else a `first.last@` guess. Generic `info@` is a
+   fallback only; dead domains (no MX) are skipped; opt in per profile to verify addresses via
+   [Verifalia](https://verifalia.com) (catch-all aware, fails open). The email is drafted in a
+   human voice — no em dashes or AI clichés, subject led by your company name, no signature (your
+   client adds it).
+4. **Follow-ups** — flags `sent` companies with no reply after `FOLLOWUP_DAYS` (default 5) calendar days; two nudges max
+   (a fuller first, weaving in a `recent_innovations` win, then a short final touch-base), then
+   stops.
+5. **Writes `outbox/<date>/`** — `new_prospects.{md,html}` + `followups.{md,html}`, each with its
+   contact list and a copyable comma-separated `To:` line. The HTML links your company name so
+   pasting into Gmail keeps the hyperlink; re-running the same day **appends** rather than
+   overwrites.
+6. Prints a digest and a token-usage line.
 
-After tuning the email wording, `prospectus-agent --refine` rewrites **today's**
-existing drafts with the current prompt (no re-discovery or web research — cheap and
-fast), then regenerates the outbox. Contacts you've already curated are left untouched.
+`prospectus-agent --refine` re-drafts **today's** existing drafts with the current prompt (no
+re-discovery or research — cheap and fast), then regenerates the outbox; curated contacts are left
+untouched. Every company it ever sees is stored, so none resurface.
 
-Every company it ever sees (fits and non-fits) is stored, so none resurface.
-
-**Under the hood:** the work splits into two roles, and you point each at its **own
-model — even its own vendor** (Anthropic *or* OpenAI — mix freely). The point is to
-spend where it matters: a cheap model does the high-volume searching, a stronger one
-writes the (short) emails.
-
-- **Searcher** — discovery, per-company research, and profile refresh, using the
-  hosted `web_search` tool. This is the bulk of the token spend, so a cheap model
-  pays off. Default: Anthropic `claude-haiku-4-5` — override with `SEARCH_VENDOR` /
-  `SEARCH_MODEL` (or `DISCOVERY_MODEL` to swap just the mechanical scoring step).
-- **Writer** — drafts *every* email: initial outreach, follow-ups, and `--refine`
-  rewrites. No web search and the output is short, so even a flagship model stays
-  cheap here. Default: Anthropic `claude-sonnet-4-6` — override with `WRITER_VENDOR`
-  / `WRITER_MODEL`.
-
-So an OpenAI searcher feeding a Claude writer (or any other split) is a one-line
-change in `.env`. Both roles go through a single vendor-neutral `llm.py` seam
-(Anthropic Messages API or OpenAI Responses API, with structured output via strict
-tools). The boring-but-important bookkeeping (SQLite, dedup, follow-up timing) is
-plain Python.
+**Two roles, your choice of model — and vendor.** A cheap **searcher** (discovery, research,
+profile refresh, with `web_search`; default Anthropic `claude-haiku-4-5`) does the high-volume
+work; a stronger **writer** (every email; default `claude-sonnet-4-6`) writes the short drafts.
+Mix Anthropic and OpenAI freely in `.env` — both go through one vendor-neutral `llm.py` seam
+(Messages / Responses API, structured output via strict tools).
 
 ## Config dials (`.env`)
 
-`profile.yaml` is your business; `.env` is the machinery. Secrets and cost/runtime
-knobs live here (gitignored):
+`profile.yaml` is your business; `.env` is the machinery (gitignored):
 
 | Variable | Purpose |
 |---|---|
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | API key(s) for the vendor(s) you use. Only the vendors named in `SEARCH_VENDOR` / `WRITER_VENDOR` need a key. |
-| `DEFAULT_PROFILE` | Business to run when no `--profile` is given (loads `profile.<name>.yaml` + `<name>.db` + `outbox/<name>/`). Omit to use the plain `profile.yaml` / `prospects.db` defaults. |
-| `SEARCH_VENDOR` / `SEARCH_MODEL` | Vendor (`anthropic`\|`openai`) + model for the **searcher** (discovery, research, profile refresh, with web search). Default `anthropic` / `claude-haiku-4-5`. |
-| `WRITER_VENDOR` / `WRITER_MODEL` | Vendor + model for the **writer** (email drafting, no web search). Default `anthropic` / `claude-sonnet-4-6`. |
-| `DISCOVERY_MODEL` | Override the searcher model for the mechanical steps (profile + scoring) only; defaults to `SEARCH_MODEL`. |
-| `FIT_SCORE_THRESHOLD`, `TARGET_COMPANY_COUNT`, `MAX_DISCOVERY_CALLS`, `FOLLOWUP_BUSINESS_DAYS` | Pipeline tunables |
-| `MAX_PER_SECTOR` | Max picks from one sector per day (diversifier; default 2) |
-| `AVOID_SECTORS` | Comma-separated sector keys to exclude entirely (e.g. `aerospace_defense`). Avoided-but-qualified companies are kept as reversible backlog. Valid keys are in `sectors.py`. |
-| `MAX_COMPANY_SIZE` | Largest company size to target: `startup`\|`small`\|`mid`\|`large`\|`enterprise` (default `mid`). Bigger companies (e.g. multinationals like GM) are excluded. |
-| `MAX_PUBLIC_EMAILS` / `MAX_PEOPLE` / `GUESSES_PER_PERSON` | Contact-list size per company (default 1 generic inbox + 3 senior people, 1 address each). |
-| `DISCOVERY_EFFORT` / `DRAFTING_EFFORT` / `SEARCH_CONTEXT_SIZE` | OpenAI-backend only (reasoning effort + web-search context size); ignored on the Anthropic backend. |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | Key(s) for the vendor(s) you use — only those named in `SEARCH_VENDOR` / `WRITER_VENDOR`. |
+| `DEFAULT_PROFILE` | Business to run with no `--profile` (loads `profile.<name>.yaml` + `<name>.db` + `outbox/<name>/`). |
+| `SEARCH_VENDOR` / `SEARCH_MODEL` | Vendor (`anthropic`\|`openai`) + model for the **searcher**. Default `anthropic` / `claude-haiku-4-5`. |
+| `WRITER_VENDOR` / `WRITER_MODEL` | Vendor + model for the **writer** (drafting). Default `anthropic` / `claude-sonnet-4-6`. |
+| `DISCOVERY_MODEL` | Override the searcher model for the mechanical steps only; defaults to `SEARCH_MODEL`. |
+| `FIT_SCORE_THRESHOLD`, `TARGET_COMPANY_COUNT`, `MAX_DISCOVERY_CALLS`, `FOLLOWUP_DAYS` | Pipeline tunables (`FOLLOWUP_DAYS` = calendar days before a follow-up is due, default 5). |
+| `MAX_PER_SECTOR` | Max picks from one sector per day (diversifier; default 2). |
+| `AVOID_SECTORS` | Comma-separated sector keys to exclude (kept as reversible backlog). Valid keys in `sectors.py`. |
+| `MAX_COMPANY_SIZE` | Largest size to target: `startup`\|`small`\|`mid`\|`large`\|`enterprise` (default `mid`). |
+| `MAX_PUBLIC_EMAILS` / `MAX_PEOPLE` / `GUESSES_PER_PERSON` | Contact-list size (≤3 people, **one** address each; inbox as fallback). Keep `GUESSES_PER_PERSON=1`. |
+| `VERIFALIA_USERNAME` / `VERIFALIA_PASSWORD` | Optional [Verifalia](https://verifalia.com) HTTP-Basic creds for mailbox verification. Blank = off. Enable per business with `settings.verify_emails: true` in its `profile.<name>.yaml`. |
+| `VERIFY_MAX_CANDIDATES` | Max address formats verified per person (default 2 — keeps a 25/day free tier in budget). |
+| `DISCOVERY_EFFORT` / `DRAFTING_EFFORT` / `SEARCH_CONTEXT_SIZE` | OpenAI backend only; ignored on Anthropic. |
 | `DISCOVERY_MAX_TOKENS` / `DRAFT_MAX_TOKENS` / `PROFILE_MAX_TOKENS` | Per-step output-token caps. |
 
 ## Daily use
 
-The CLI is **scope × action**. Scope: which business (`--profile`) and which drafts —
-*new prospects* by default, *follow-ups* with `--followup`. Action: `--refine`
-(re-draft) or `--sent` (record sends); with no action, the default scope discovers +
-drafts. `--refine` and `--sent` can't be combined (one makes a new unsent draft, the
-other says it's already sent).
+The CLI is **scope × action**. Scope: which business (`--profile`) and which drafts — *new
+prospects* by default, *follow-ups* with `--followup`. Action: `--refine` (re-draft) or `--sent`
+(record sends); no action = discover + draft. `--refine` and `--sent` can't combine.
 
 ```bash
 prospectus-agent                    # NEW PROSPECTS: discover + draft
-prospectus-agent --refine           # NEW PROSPECTS: re-draft today's with the latest prompt
-prospectus-agent --sent             # NEW PROSPECTS: record you sent them (starts follow-up clock)
+prospectus-agent --refine           # re-draft today's with the latest prompt
+prospectus-agent --sent             # record you sent them (starts the follow-up clock)
 
 prospectus-agent --followup           # FOLLOW-UPS: draft one for anyone past the threshold
-prospectus-agent --followup --refine  # FOLLOW-UPS: re-draft them with the latest voice
-prospectus-agent --followup --sent    # FOLLOW-UPS: record you sent them (resets the clock)
+prospectus-agent --followup --refine  # re-draft them with the latest voice
+prospectus-agent --followup --sent    # record you sent them (resets the clock)
 
 prospectus-agent --profile acme       # any of the above, for a different business
-prospectus-agent --runall             # daily pipeline for EVERY profile
-prospectus-agent --runall --followup --refine  # ...or any action, fanned out to every profile
+prospectus-agent --runall             # daily pipeline for EVERY profile (add actions to fan out)
 
 prospectus-status drafts            # list drafts ready to review
-prospectus-status show DOMAIN       # see the full draft + contacts
-# ...you read it, maybe tweak it, and send it from your inbox...
-prospectus-status mark DOMAIN sent       # starts the follow-up clock
-prospectus-status mark DOMAIN replied    # or: not_interested
+prospectus-status show DOMAIN       # full draft + contacts
+prospectus-status mark DOMAIN sent  # (or: replied / not_interested) — drives the follow-up clock
 ```
 
-(With the venv activated, the commands are on your PATH. Otherwise prefix with
-`.venv/bin/`, e.g. `.venv/bin/prospectus-agent`.)
-
-Status values: `new`, `drafted`, `sent`, `followed_up` (1st follow-up sent, final
-pending), `no_reply` (both follow-ups sent, done), `replied`, `not_interested`, `not_a_fit`.
-The agent sends **two follow-ups max** — a fuller first one, then a short final
-touch-base — then stops.
+(Activate the venv, or prefix with `.venv/bin/`.) Status values: `new`, `drafted`, `sent`,
+`followed_up`, `no_reply` (both follow-ups sent, done), `replied`, `not_interested`, `not_a_fit`.
 Reply tracking is fully manual — the agent never reads your inbox.
 
 ## A few honest notes
 
-- **Guessed emails are guesses.** When it can't find a published address it pattern-
-  guesses one (`jane.doe@…`). Most land; some bounce. For anyone important, sanity-
-  check the address before sending.
-- **Garbage in, garbage out.** Lead quality tracks how well you describe your ideal
-  customer in `profile.yaml`. Vague profile → mediocre leads. Spend ten minutes on it.
-- **Watch the cost line.** I burned through $5 in three runs before realising I was
-  using a flagship model for everything. The defaults split the work — a cheap model
-  searches, a stronger one writes the (short) emails — and the token-usage summary at
-  the end of each run is there so you notice early.
-- **Read before you send.** It's good, not infallible — it's writing about companies
-  it researched in seconds. Skim each draft. That's the whole point of "it never sends."
-- **It's single-user and local** (a SQLite file per business, your own inbox). It can
-  run several businesses side by side via profiles, but a *hosted, multi-tenant*
-  version (many users) is a someday-maybe, not a today.
+- **Guessed emails are guesses.** Unverified ones may bounce; verify (or turn on Verifalia) for
+  anyone important.
+- **Garbage in, garbage out.** Lead quality tracks how well you describe your ideal customer in
+  `profile.yaml`. Spend ten minutes on it.
+- **Watch the cost line.** The defaults split the work (cheap searcher, stronger writer); the
+  token-usage summary each run is there so you notice early.
+- **Read before you send.** It's good, not infallible — skim each draft. That's the whole point
+  of "it never sends."
+- **Single-user and local** (a SQLite file per business, your own inbox). A hosted multi-tenant
+  version is a someday-maybe.
 
 ## The code
 
-Small and deliberately boring. The code lives in `src/prospectus_agent/`; engine
-files know nothing about any particular business — everything company-specific lives
-in `profile.yaml` (at the project root) and `prompts/`.
+Small and deliberately boring. Engine code lives in `src/prospectus_agent/` and knows nothing
+about any business — everything company-specific is in `profile.yaml` and `prompts/`.
 
-| File (under `src/prospectus_agent/`) | Role |
+| Area | Files |
 |---|---|
-| `cli.py` | `prospectus-agent` entrypoint (daily run / `--refine`) |
-| `daily_run.py` | Pipeline implementation |
-| `refine.py` / `redraft.py` | Re-draft today's emails with the current prompt (no re-research) + its engine |
-| `mark_sent.py` | `--sent`: mark drafted emails as sent so the follow-up clock starts |
-| `followup_run.py` | `--followup`: standalone follow-up sweep (list + draft) |
-| `status.py` | Manual status CLI (`prospectus-status`) |
-| `agent_profile.py` | Loader for the active `profile.*.yaml` (your business + ICP — the thing you edit) |
-| `prompts/` | Prompt templates, one module per step — edit to change wording/tone |
-| `paths.py` | Resolves the project home + loads `.env` (before config computes paths) |
-| `config.py` | `.env` tunables, per-profile path resolution, per-vendor client factory |
-| `runner.py` | Run prologue: validate keys, build the per-vendor client registry, open the DB |
-| `db.py` | SQLite layer (companies, contacts, emails) |
-| `llm.py` | Vendor-neutral LLM seam — Anthropic (Messages) / OpenAI (Responses), web_search + strict tool extraction |
-| `on_profile.py` | Company website-brief refresh (cached) |
-| `discovery.py` | The discovery loop + per-sector diversifier + backlog seeding |
-| `sectors.py` | Keyword sector classifier (powers the diversifier) |
-| `research.py` | Per-company research + initial-email drafting |
-| `drafting.py` | Follow-up drafting |
-| `contacts.py` | Email-pattern guessing |
-| `followups.py` | Business-day follow-up sweep |
-| `outbox.py` | Writes the copy-paste digests — `new_prospects.{md,html}` + `followups.{md,html}` |
-| `schemas.py` | Pydantic validation models |
+| CLI / entrypoints | `cli.py`, `daily_run.py`, `refine.py`, `mark_sent.py`, `followup_run.py`, `status.py` |
+| Config / setup | `paths.py` (home + `.env`), `config.py` (`.env` + per-profile paths + client factory), `runner.py` (session prologue + DB backup), `agent_profile.py` (loads `profile.*.yaml`) |
+| Pipeline | `discovery.py` (+ `sectors.py` diversifier), `research.py` (research + initial draft), `drafting.py` / `followups.py` (follow-ups), `redraft.py` (`--refine`), `on_profile.py` (website brief) |
+| Contacts / email | `contacts.py` (address pattern inference + guessing), `verify.py` (MX + Verifalia), `outbox.py` (md/html digests) |
+| Data / model | `db.py` (SQLite), `llm.py` (vendor-neutral seam), `prompts/`, `schemas.py` |
 
 ## Tests
 
 ```bash
-.venv/bin/pip install -e ".[dev]"   # if you haven't already
+.venv/bin/pip install -e ".[dev]"
 .venv/bin/python -m pytest
 ```
 
-The suite runs **offline** — both vendor clients are faked, so no key and no spend. It
-covers the database (dedup, status, contacts, follow-up timing), email-pattern
-guessing, business-day math, the discovery loop (including that competitors and
-over-size companies get filtered out), per-company research/drafting, the LLM helpers,
-and the strict tool schemas.
+Runs **offline** — both vendor clients are faked, so no key and no spend. Covers the database,
+address inference/verification, follow-up timing, the discovery loop (competitor + over-size
+filtering), research/drafting, the LLM helpers, and the strict tool schemas.
 
 ## Roadmap / known gaps
 
-- No public-holiday calendar (business days = Mon–Fri).
-- Guessed emails aren't SMTP/MX-verified.
+- Follow-up timing is plain calendar days (`FOLLOWUP_DAYS`); no working-day/holiday calendar.
+- Address verification is opt-in; unverified guesses can still bounce.
 - Single-tenant and local; a configurable hosted version may come later.
 
-Built it for myself; sharing it in case your prospecting mornings look like mine did.
-
 ## Contribute
-Contributions are very welcome! This is supposed to be a shared project. Many businesses are facing
-the same struggles, let's help each other!
+
+Contributions very welcome — this is meant to be shared. Lots of businesses face the same
+prospecting struggle; let's help each other.

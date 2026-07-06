@@ -164,8 +164,25 @@ VERIFALIA_PASSWORD = (_raw("VERIFALIA_PASSWORD") or "").strip()
 # inference the first candidate is usually right, so this mostly costs 1 credit
 # per person; 2 bounds the worst case for the free 25/day tier.
 VERIFY_MAX_CANDIDATES = _int("VERIFY_MAX_CANDIDATES", 2)
-FOLLOWUP_BUSINESS_DAYS = _int("FOLLOWUP_BUSINESS_DAYS", 5)
+FOLLOWUP_DAYS = _int("FOLLOWUP_DAYS", 5)  # calendar days after contact before a follow-up is due
 DB_PATH = _path("DB_PATH", _profiled("prospects.db", "{p}.db"))
+
+# --- Auto-send (`--deliver`) -----------------------------------------------
+# From address for automated sends (both profiles send from the Open Numerics inbox).
+AUTOSEND_FROM = (_raw("AUTOSEND_FROM") or "hannesv@opennumerics.com").strip()
+AUTOSEND_DAILY_MAX = _int("AUTOSEND_DAILY_MAX", 10)          # max company-emails per run
+AUTOSEND_MAX_RECIPIENTS = _int("AUTOSEND_MAX_RECIPIENTS", 5)  # To+Bcc cap per email
+AUTOSEND_PACING_SECONDS = _int("AUTOSEND_PACING_SECONDS", 2)  # gap between live sends
+# Profiles allowed to auto-send; others are gated off (dry-run only). ON first.
+AUTOSEND_PROFILES = _list("AUTOSEND_PROFILES") or ["open-numerics"]
+# Gmail OAuth (Internal app). Live sending is wired in a later increment; empty for now.
+GMAIL_CLIENT_ID = (_raw("GMAIL_CLIENT_ID") or "").strip()
+GMAIL_CLIENT_SECRET = (_raw("GMAIL_CLIENT_SECRET") or "").strip()
+GMAIL_REFRESH_TOKEN = (_raw("GMAIL_REFRESH_TOKEN") or "").strip()
+
+def autosend_allowed() -> bool:
+    """True if the active profile is allowed to auto-send (else dry-run only)."""
+    return (PROFILE or "open-numerics").lower() in AUTOSEND_PROFILES
 
 
 def size_rank(size: str) -> int:

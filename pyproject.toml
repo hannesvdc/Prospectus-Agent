@@ -1,6 +1,6 @@
 [project]
 name = "prospectus-agent"
-version = "0.6.0"
+version = "0.7.0"
 description = "Daily AI agent that finds prospective clients and drafts tailored outreach emails."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,6 +15,13 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+]
+# Gmail auto-send (`--deliver --live`). Optional: dry-run and the rest of the tool work
+# without these. Install with `pip install -e '.[gmail]'` when wiring live sending.
+gmail = [
+    "google-api-python-client>=2.0",
+    "google-auth>=2.0",
+    "google-auth-oauthlib>=1.0",
 ]
 
 [project.scripts]

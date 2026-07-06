@@ -3,7 +3,7 @@
 Invoked by `prospectus-agent --profile <name> --followup`.
 
 Sweeps for companies in 'sent' status that haven't replied after
-FOLLOWUP_BUSINESS_DAYS business days and ALWAYS writes a fresh `followups.md`/`.html`
+FOLLOWUP_DAYS calendar days and ALWAYS writes a fresh `followups.md`/`.html`
 for today containing every currently-due follow-up — even ones drafted on an earlier
 run, so there's always a file to work from.
 
@@ -41,7 +41,7 @@ def main(refine: bool = False, mark_sent: bool = False) -> int:
                 changed, verb = sum(1 for s in summaries if s.get("refined")), "re-drafted"
             elif not mark_sent:
                 print(f"Checking for follow-ups (no reply after "
-                      f"{config.FOLLOWUP_BUSINESS_DAYS} business days)...")
+                      f"{config.FOLLOWUP_DAYS} days)...")
                 summaries = followups.run_followups(client, conn, profile_brief)
                 changed, verb = sum(1 for s in summaries if s.get("drafted")), "newly drafted"
             else:
@@ -56,8 +56,8 @@ def main(refine: bool = False, mark_sent: bool = False) -> int:
                         state = "re-drafted" if s.get("refined") else "unchanged"
                     else:
                         state = "newly drafted" if s.get("drafted") else s.get("note", "—")
-                    bdays = f" — {s['business_days']} business days" if "business_days" in s else ""
-                    print(f"  ● {s['name']} ({s['domain']}){bdays}, {state}")
+                    ndays = f" — {s['days']} days" if "days" in s else ""
+                    print(f"  ● {s['name']} ({s['domain']}){ndays}, {state}")
 
             # 2) Always (re)write today's followups file with ALL currently-due drafts.
             written = outbox.write_file(conn, followups.due_followup_emails(conn),

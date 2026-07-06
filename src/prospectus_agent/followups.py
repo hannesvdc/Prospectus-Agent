@@ -1,34 +1,28 @@
 """Follow-up logic: find companies you emailed that haven't replied within
-FOLLOWUP_BUSINESS_DAYS business days, and draft a follow-up for each.
+FOLLOWUP_DAYS calendar days, and draft a follow-up for each.
 
-Business days = weekdays (Mon-Fri). No public-holiday calendar in v1.
+Calendar days (not weekdays) so due-dates spread evenly across the week — a company
+comes due exactly N days after contact, weekends included, instead of the whole
+weekend's worth bunching onto Monday.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 from prospectus_agent import config
 from prospectus_agent import db
 from prospectus_agent import drafting
 
 
-def business_days_since(start_iso: str, end: date | None = None) -> int:
-    """Number of weekdays strictly after `start_iso`, up to and including `end`
-    (default: today). Sending Monday => reaches 5 the following Monday."""
+def days_since(start_iso: str, end: date | None = None) -> int:
+    """Calendar days from `start_iso` up to `end` (default: today)."""
     end = end or date.today()
-    start = date.fromisoformat(start_iso)
-    count = 0
-    d = start
-    while d < end:
-        d += timedelta(days=1)
-        if d.weekday() < 5:  # 0-4 = Mon-Fri
-            count += 1
-    return count
+    return (end - date.fromisoformat(start_iso)).days
 
 
 def is_due(row) -> bool:
     """True if an awaiting company row is past the follow-up threshold."""
-    return business_days_since(row["last_contact_date"]) >= config.FOLLOWUP_BUSINESS_DAYS
+    return days_since(row["last_contact_date"]) >= config.FOLLOWUP_DAYS
 
 
 def is_final(row) -> bool:
@@ -80,14 +74,14 @@ def run_followups(client, conn, on_profile: str) -> list[dict]:
     dicts for the digest."""
     flagged: list[dict] = []
     for row in db.companies_awaiting_followup(conn):
-        bdays = business_days_since(row["last_contact_date"])
-        if bdays < config.FOLLOWUP_BUSINESS_DAYS:
+        days = days_since(row["last_contact_date"])
+        if days < config.FOLLOWUP_DAYS:
             continue
 
         entry = {
             "name": row["name"],
             "domain": row["domain"],
-            "business_days": bdays,
+            "days": days,
             "final": is_final(row),
             "drafted": False,
         }

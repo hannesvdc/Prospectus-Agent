@@ -1,4 +1,4 @@
-"""Tests for business-day math and the follow-up sweep (drafting stubbed)."""
+"""Tests for calendar-day follow-up timing and the sweep (drafting stubbed)."""
 from __future__ import annotations
 
 from datetime import date, timedelta
@@ -9,31 +9,19 @@ from prospectus_agent import followups
 from prospectus_agent.schemas import FollowUpResult
 
 
-def _next_weekday(d: date, weekday: int) -> date:
-    while d.weekday() != weekday:
-        d += timedelta(days=1)
-    return d
-
-
 def test_same_day_is_zero():
     d = date(2026, 6, 10)
-    assert followups.business_days_since(d.isoformat(), d) == 0
+    assert followups.days_since(d.isoformat(), d) == 0
 
 
-def test_monday_to_next_monday_is_five():
-    mon = _next_weekday(date(2026, 6, 1), 0)
-    assert followups.business_days_since(mon.isoformat(), mon + timedelta(days=7)) == 5
-
-
-def test_weekend_only_counts_zero():
-    sat = _next_weekday(date(2026, 6, 1), 5)  # Saturday
-    assert followups.business_days_since(sat.isoformat(), sat + timedelta(days=1)) == 0
-
-
-def test_friday_to_monday_is_one():
-    fri = _next_weekday(date(2026, 6, 1), 4)  # Friday
-    # +3 days -> Monday; Sat/Sun skipped, Monday counts once.
-    assert followups.business_days_since(fri.isoformat(), fri + timedelta(days=3)) == 1
+def test_counts_calendar_days_including_weekends():
+    start = date(2026, 6, 1)
+    assert followups.days_since(start.isoformat(), start + timedelta(days=7)) == 7
+    # weekend days count too (unlike the old business-day math)
+    sat = start
+    while sat.weekday() != 5:
+        sat += timedelta(days=1)
+    assert followups.days_since(sat.isoformat(), sat + timedelta(days=2)) == 2
 
 
 # --- run_followups ---------------------------------------------------------
@@ -93,12 +81,12 @@ def test_run_followups_skips_already_drafted(conn, monkeypatch):
 
 
 def test_threshold_respected(conn, monkeypatch):
-    monkeypatch.setattr(config, "FOLLOWUP_BUSINESS_DAYS", 5)
+    monkeypatch.setattr(config, "FOLLOWUP_DAYS", 7)
     monkeypatch.setattr(
         followups.drafting, "draft_followup",
         lambda *a, **k: FollowUpResult(email_subject="x", email_body="y"),
     )
-    # 2 calendar days ago -> at most 2 business days -> under threshold.
+    # 2 calendar days ago -> under the 7-day threshold.
     _insert_sent(conn, "recent.com", days_ago=2)
     result = followups.run_followups(client=None, conn=conn, on_profile="ON")
     assert result == []

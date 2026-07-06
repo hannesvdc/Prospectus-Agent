@@ -48,25 +48,32 @@ def build_user(company_row, prior_block: str, on_profile: str, final: bool = Fal
     produces the short, last touch-base follow-up."""
     if final:
         return _final_followup(company_row, prior_block, on_profile)
+    # The bridge sentence must fit what the seller IS: a consultancy that does the work
+    # FOR clients ("we'd love to do the same for you") vs. a self-serve product/platform
+    # users run themselves ("we'd love for you to put it to work on your own molecules").
+    # Follow the profile's voice notes; never imply bespoke client work for a product.
     if profile.RECENT_INNOVATIONS:
         momentum_step = (
             f"""3. Mention ONE encouraging recent win as light momentum, then ONE short,
-     warm bridge sentence to them — e.g. "Since I wrote, we've had a few encouraging
-     wins, including [one result from the recent-progress list below]. We'd love to do
-     the same for you." Pick just ONE win (do NOT list several), and keep the bridge to
-     a single short sentence — NOT a prescriptive paragraph diagnosing their problem or
-     spelling out exactly where we'd plug in.""")
+     warm bridge sentence connecting it to them — e.g. "Since I wrote, we've had a few
+     encouraging wins, including [one result from the recent-progress list below]."
+     followed by an invite that FITS {profile.NAME}: for a service, "we'd love to do the
+     same for you"; for a self-serve product/platform, "we'd love for you to try it on
+     your own work" (do NOT say "do it for you" for a product). Pick just ONE win (do
+     NOT list several), keep the bridge to a single short sentence — NOT a prescriptive
+     paragraph diagnosing their problem or spelling out exactly where we'd plug in.""")
     else:
         momentum_step = (
-            """3. Add ONE short, warm sentence on the value you'd love to bring them —
-     light and high-level (e.g. "we'd love to help you do the same"), NOT a prescriptive
-     paragraph diagnosing their problem or spelling out exactly where we'd plug in.""")
+            f"""3. Add ONE short, warm sentence on the value — light and high-level, phrased
+     to FIT {profile.NAME}: a service, "we'd love to help you do the same"; a self-serve
+     product, "we'd love for you to try it on your own work" (never "do it for you" for a
+     product). NOT a prescriptive paragraph diagnosing their problem or where we'd plug in.""")
     return f"""About {profile.NAME}:
 {on_profile}
 
 We emailed {company_row['name']} ({company_row['domain']}) on
 {company_row['last_contact_date']} and have had no reply after
-{config.FOLLOWUP_BUSINESS_DAYS} business days.
+{config.FOLLOWUP_DAYS} days.
 
 {prior_block}
 
@@ -109,8 +116,12 @@ Write a VERY SHORT, warm, no-pressure final note (about 40-70 words):
      and that we won't keep emailing.
   2. One line on what {profile.NAME} does, with a link to learn more: {profile.WEBSITE}
      (include the URL in the body so it's clickable).
-  3. A final, low-key offer of a short chat whenever it's useful. Do NOT add an
-     apologetic opt-out line (e.g. "no worries if there's no time", "no need to reply").
+  3. A final, warm, DIRECT offer of a short call — state it plainly ("I'd be glad to
+     set up a short call" / "happy to grab 20 minutes"). Do NOT hedge it as a
+     presupposing conditional ("if a call ever makes sense", "if it's useful", "if
+     that's helpful", "whenever it's useful") and do NOT add an apologetic opt-out line
+     ("no worries if there's no time", "no need to reply"). The low pressure comes from
+     it being the last note, not from an apologetic ask.
 Keep it genuinely short — NO capabilities list, no re-pitch. {SIGNOFF_RULE}
 {_voice_notes()}
 Then call `submit_followup`.

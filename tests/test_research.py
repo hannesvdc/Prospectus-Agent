@@ -139,8 +139,33 @@ def test_research_verifies_and_keeps_deliverable(conn, monkeypatch):
 
     contacts = db.get_contacts(conn, cid)
     emails = {c["email"]: c["email_confidence"] for c in contacts}
-    # Jane verified & kept; Bob (all invalid) dropped; inbox dropped (reliable exists).
-    assert emails == {"jane.doe@acme.com": "verified"}
+    # Jane verifies -> kept as 'verified'. Bob's guesses all come back invalid, but we
+    # DON'T drop him — we fall back to the best guess. Inbox dropped (reliable exists).
+    assert emails == {"jane.doe@acme.com": "verified", "bob.lee@acme.com": "guessed"}
+
+
+def test_research_never_zero_contacts_when_verification_fails(conn, monkeypatch):
+    # Deliverable domain, but Verifalia rejects every guess -> we must still emit
+    # guessed addresses, never "(no contacts found)".
+    _caps(monkeypatch)
+    monkeypatch.setattr(research.profile, "VERIFY_EMAILS", True)
+    monkeypatch.setattr(research.verify, "verification_available", lambda: True)
+    monkeypatch.setattr(research.verify, "verify_email", lambda e: "invalid")
+    cid, cand = _winner(conn)
+    payload = {
+        "refined_applications": ["x"],
+        "public_emails": [],
+        "people": [{"name": "Jane Doe", "title": "CTO", "public_email": None}],
+        "email_subject": "S", "email_body": "B", "draft_notes": "",
+    }
+    monkeypatch.setattr(research, "run_searcher", lambda *a, **k: payload)
+    monkeypatch.setattr(research, "run_writer", lambda *a, **k: payload)
+    research.research_and_draft(None, conn, cid, cand, on_profile="ON")
+
+    contacts = db.get_contacts(conn, cid)
+    assert contacts, "must never leave a deliverable company with zero contacts"
+    assert contacts[0]["email"] == "jane.doe@acme.com"
+    assert contacts[0]["email_confidence"] == "guessed"
 
 
 def test_research_catch_all_short_circuits_verification(conn, monkeypatch):

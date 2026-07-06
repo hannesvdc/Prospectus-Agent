@@ -101,7 +101,7 @@ def test_followup_build_user_interpolates_and_omits_signature():
     assert "Acme" in out
     assert "PRIOR EMAIL TEXT" in out
     assert "submit_followup" in out
-    assert str(config.FOLLOWUP_BUSINESS_DAYS) in out
+    assert str(config.FOLLOWUP_DAYS) in out
     assert "NOT add a signature" in " ".join(out.split())  # no-signature instruction
 
 
