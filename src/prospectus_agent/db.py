@@ -12,6 +12,8 @@ Status lifecycle for a company:
     replied      -> they responded; no follow-up needed
     not_interested -> closed
     not_a_fit    -> seen during discovery but below the fit threshold
+    unreachable  -> qualified, but its domain has no MX/A record (can't receive mail;
+                    usually a wrong or parked domain) — not drafted, won't recur
 """
 from __future__ import annotations
 
@@ -48,6 +50,7 @@ VALID_STATUSES = {
     "replied",
     "not_interested",
     "not_a_fit",
+    "unreachable",
 }
 
 _SCHEMA = """

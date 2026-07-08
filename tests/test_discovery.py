@@ -50,6 +50,8 @@ def _seed_defaults(monkeypatch, *, threshold=7, target=5, per_sector=2, calls=1)
     # Isolate tests from whatever the local .env happens to set.
     monkeypatch.setattr(config, "AVOID_SECTORS", [])
     monkeypatch.setattr(config, "MAX_COMPANY_SIZE", "enterprise")  # allow all sizes
+    # The MX gate shells out to `dig`; stub it to reachable by default (offline).
+    monkeypatch.setattr(discovery.verify, "domain_deliverable", lambda d: True)
 
 
 def test_qualifies_and_stores_everything(conn, monkeypatch):
@@ -256,3 +258,17 @@ def test_company_ids_are_real(conn, monkeypatch):
     winners = discovery.discover(client=None, conn=conn, on_profile="ON")
     cid, cand = winners[0]
     assert db.get_company_by_domain(conn, "a.com")["id"] == cid
+
+
+def test_no_mx_domain_marked_unreachable_not_drafted(conn, monkeypatch):
+    _seed_defaults(monkeypatch)
+    # good.com can receive mail; dead.org has no MX/A (wrong/parked domain).
+    monkeypatch.setattr(discovery.verify, "domain_deliverable", lambda d: d != "dead.org")
+    _stub_rounds(monkeypatch, [
+        {"candidates": [_cand("Good Co", "good.com", 9), _cand("Dead Co", "dead.org", 9)]},
+    ])
+    winners = discovery.discover(client=None, conn=conn, on_profile="ON")
+    # dead.org is qualified by score but never becomes a winner (won't be drafted).
+    assert [c.domain for _, c in winners] == ["good.com"]
+    assert db.get_company_by_domain(conn, "dead.org")["status"] == "unreachable"
+    assert db.get_company_by_domain(conn, "good.com")["status"] == "new"

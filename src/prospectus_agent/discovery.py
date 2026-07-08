@@ -23,6 +23,7 @@ from prospectus_agent import agent_profile as profile
 from prospectus_agent import config
 from prospectus_agent import db
 from prospectus_agent import sectors
+from prospectus_agent import verify
 from prospectus_agent.llm import WEB_SEARCH_TOOL, function_tool, run_searcher
 from prospectus_agent.prompts import discovery as discovery_prompts
 from prospectus_agent.schemas import Candidate, DiscoveryResult
@@ -178,7 +179,15 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
                 and not cand.is_service_provider
                 and config.size_allowed(cand.company_size)
             )
-            status = "new" if qualified else "not_a_fit"
+            # A qualified company whose domain can't receive mail (no MX/A) is almost
+            # always a wrong/parked domain — don't draft it (marked 'unreachable' so it
+            # doesn't recur or seed the backlog). Only check the ones we'd otherwise draft.
+            reachable = verify.domain_deliverable(dom) if qualified else True
+            if qualified and not reachable:
+                print(f"    ⚠ {dom}: no MX/A record — can't receive mail (likely a wrong "
+                      "or parked domain); skipping.")
+            status = "new" if (qualified and reachable) else \
+                     "unreachable" if qualified else "not_a_fit"
             cid = db.upsert_company(
                 conn,
                 name=cand.name,
@@ -192,8 +201,8 @@ def discover(client, conn, on_profile: str) -> list[tuple[int, Candidate]]:
                 status=status,
             )
             new_this_round += 1
-            # Qualified-but-not-selected stays 'new' (a backlog for a future run).
-            if qualified:
+            # Qualified + reachable but not selected stays 'new' (a backlog for a future run).
+            if qualified and reachable:
                 try_select(cid, cand)
 
         print(f"    +{new_this_round} new companies seen this round")

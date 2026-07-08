@@ -40,6 +40,8 @@ def _print_digest(winners_summaries: list[dict], followup_summaries: list[dict])
             print(f"  ✗ {s['name']} ({s['domain']}) — research/draft failed")
             continue
         print(f"\n  ● {s['name']} ({s['domain']})")
+        if s.get("warning"):
+            print(f"      ⚠ {s['warning']}")
         print(f"      contacts stored: {s['contacts']}")
         print(f"      subject: {s.get('subject', '')}")
         apps = s.get("applications") or []

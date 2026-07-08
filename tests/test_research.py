@@ -195,3 +195,23 @@ def test_research_catch_all_short_circuits_verification(conn, monkeypatch):
     assert emails["jane.doe@acme.com"] == "guessed"      # catch-all -> unconfirmed
     assert emails["bob.lee@acme.com"] == "guessed"
     assert "info@acme.com" in emails                     # inbox kept (no reliable personal)
+
+
+def test_undeliverable_domain_warns_and_makes_no_contacts(conn, monkeypatch, capsys):
+    _caps(monkeypatch)
+    monkeypatch.setattr(research.verify, "domain_deliverable", lambda d: False)  # no MX/A
+    cid, cand = _winner(conn)
+    payload = {
+        "refined_applications": ["x"], "public_emails": ["info@acme.com"],
+        "people": [{"name": "Jane Doe", "title": "CTO", "public_email": None}],
+        "email_subject": "S", "email_body": "B", "draft_notes": "",
+    }
+    monkeypatch.setattr(research, "run_searcher", lambda *a, **k: payload)
+    monkeypatch.setattr(research, "run_writer", lambda *a, **k: payload)
+
+    summary = research.research_and_draft(None, conn, cid, cand, on_profile="ON")
+
+    assert summary["drafted"] is True and summary["contacts"] == 0
+    assert "no MX/A record" in summary["warning"]
+    assert db.get_contacts(conn, cid) == []
+    assert "no MX/A record" in capsys.readouterr().out   # surfaced to the operator

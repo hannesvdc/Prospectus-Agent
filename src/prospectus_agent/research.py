@@ -110,6 +110,11 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
     # so don't manufacture sure-to-bounce addresses for it (fails open if the
     # lookup can't run, so we never silently drop real prospects).
     deliverable = verify.domain_deliverable(cand.domain)
+    domain_warning = ""
+    if not deliverable:
+        domain_warning = (f"{cand.domain} has no MX/A record — it can't receive mail "
+                          "(likely a wrong or parked domain); no contacts generated.")
+        print(f"    ⚠ {domain_warning}")
 
     people = list(facts.people[:config.MAX_PEOPLE])
 
@@ -222,5 +227,6 @@ def research_and_draft(client, conn, company_id: int, cand: Candidate, on_profil
         subject=email.email_subject,
         applications=facts.refined_applications,
         draft_notes=facts.draft_notes,
+        warning=domain_warning,
     )
     return summary
