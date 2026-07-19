@@ -8,6 +8,7 @@ sends, records the send, and advances the follow-up clock.
 """
 from __future__ import annotations
 
+import sqlite3
 import sys
 import time
 from datetime import date, datetime
@@ -20,11 +21,9 @@ from prospectus_agent import runner
 from prospectus_agent import send
 
 
-def _can_send_live() -> bool:
-    return bool(config.GMAIL_CLIENT_ID and config.GMAIL_CLIENT_SECRET and config.GMAIL_REFRESH_TOKEN)
-
-
-def _initial_candidates(conn):
+def _initial_candidates(
+    conn: sqlite3.Connection,
+) -> list[tuple[sqlite3.Row, sqlite3.Row, sqlite3.Row | None]]:
     """(company, email, thread_refs=None) for drafted companies whose initial email
     hasn't been delivered yet."""
     out = []
@@ -35,7 +34,9 @@ def _initial_candidates(conn):
     return out
 
 
-def _followup_candidates(conn):
+def _followup_candidates(
+    conn: sqlite3.Connection,
+) -> list[tuple[sqlite3.Row, sqlite3.Row, sqlite3.Row | None]]:
     """(company, email, thread_refs) for due follow-ups not yet delivered — threaded
     under the initial send when we have its refs."""
     out = []
@@ -47,7 +48,8 @@ def _followup_candidates(conn):
     return out
 
 
-def _record_send(conn, company, em, message_id, resp, *, followup):
+def _record_send(conn: sqlite3.Connection, company: sqlite3.Row, em: sqlite3.Row,
+                 message_id: str, resp: dict, *, followup: bool) -> None:
     """Persist a live send: store the ids on the email and advance the company's status
     (initial -> 'sent'; follow-up -> followed_up -> no_reply), starting/resetting the clock."""
     db.mark_email_sent(
@@ -59,8 +61,7 @@ def _record_send(conn, company, em, message_id, resp, *, followup):
     )
     today = date.today().isoformat()
     if followup:
-        nxt = followups._AFTER_SENT.get(company["status"], "no_reply")
-        db.set_status(conn, company["domain"], nxt, contact_date=today)
+        followups.advance_after_followup_send(conn, company, today)
     else:
         db.set_status(conn, company["domain"], "sent", contact_date=today)
 
@@ -73,7 +74,7 @@ def main(followup: bool = False, live: bool = False) -> int:
         print(f"  Profile '{config.PROFILE or 'default'}' isn't enabled for delivery "
               f"(AUTOSEND_PROFILES={config.AUTOSEND_PROFILES}) — dry run only.\n")
         live = False
-    if live and not _can_send_live():
+    if live and not config.gmail_configured():
         print("  NOTE: no Gmail credentials set (GMAIL_CLIENT_ID/SECRET/REFRESH_TOKEN) — "
               "running as a dry run. Run `python -m prospectus_agent.gmail_auth` to set up.\n")
         live = False

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import os
 import shutil
+import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 
 from prospectus_agent import config
@@ -32,8 +34,8 @@ class Clients:
     run and threaded through the pipeline; `get(vendor)` constructs + caches the
     client on first use (so we never build a client for an unused vendor)."""
 
-    def __init__(self):
-        self._cache = {}
+    def __init__(self) -> None:
+        self._cache: dict = {}
 
     def get(self, vendor: str):
         vendor = vendor.lower()
@@ -42,7 +44,7 @@ class Clients:
         return self._cache[vendor]
 
 
-def open_db(*, backup: bool = False):
+def open_db(*, backup: bool = False) -> sqlite3.Connection:
     """Open + initialise the active profile's database, returning the connection.
     Shared by open_session() and the key-less commands (mark-sent, status CLI).
     With backup=True, roll a `<db>.bak` snapshot first — the mutating commands pass
@@ -55,7 +57,7 @@ def open_db(*, backup: bool = False):
     return conn
 
 
-def open_session():
+def open_session() -> tuple[Clients, sqlite3.Connection]:
     """Validate API keys for the configured vendors, build the client registry,
     open + initialise the active profile's database (rolling a fresh backup first),
     and reset token accounting. Returns (clients, conn). Raises RuntimeError if a
@@ -69,7 +71,7 @@ def open_session():
 
 
 @contextmanager
-def session(banner: str):
+def session(banner: str) -> Iterator[tuple[Clients, sqlite3.Connection]]:
     """Entrypoint context manager for the run commands. Prints `banner`, opens the
     session (raising RuntimeError if a required API key is missing), yields
     (clients, conn), and on exit prints the token-usage summary and closes the DB.

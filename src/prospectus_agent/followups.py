@@ -37,6 +37,16 @@ def is_final(row) -> bool:
 _AFTER_SENT = {"sent": "followed_up", "followed_up": "no_reply"}
 
 
+def advance_after_followup_send(conn, row, today: str) -> str:
+    """Advance a company one follow-up stage after its follow-up is sent
+    (sent -> followed_up -> no_reply) and stamp the contact date. Returns the new
+    status. The single home of the follow-up state machine (used by both the manual
+    `--sent` path and the auto-send path)."""
+    nxt = _AFTER_SENT.get(row["status"], "no_reply")
+    db.set_status(conn, row["domain"], nxt, contact_date=today)
+    return nxt
+
+
 def due_followup_emails(conn) -> list:
     """Latest follow-up draft for every company currently past the threshold —
     used to (re)write a complete followups.md regardless of when each was drafted."""
@@ -62,8 +72,7 @@ def mark_followups_sent(conn) -> list[dict]:
             continue
         if not db.latest_email(conn, row["id"], "followup"):
             continue
-        nxt = _AFTER_SENT.get(row["status"], "no_reply")
-        db.set_status(conn, row["domain"], nxt, contact_date=today)
+        nxt = advance_after_followup_send(conn, row, today)
         marked.append({"name": row["name"], "domain": row["domain"],
                        "final": nxt == "no_reply"})
     return marked
@@ -78,11 +87,12 @@ def run_followups(client, conn, on_profile: str) -> list[dict]:
         if days < config.FOLLOWUP_DAYS:
             continue
 
+        final = is_final(row)
         entry = {
             "name": row["name"],
             "domain": row["domain"],
             "days": days,
-            "final": is_final(row),
+            "final": final,
             "drafted": False,
         }
 
@@ -92,7 +102,7 @@ def run_followups(client, conn, on_profile: str) -> list[dict]:
             flagged.append(entry)
             continue
 
-        result = drafting.draft_followup(client, conn, row, on_profile, final=is_final(row))
+        result = drafting.draft_followup(client, conn, row, on_profile, final=final)
         if result:
             db.add_email(conn, row["id"], type="followup",
                          subject=result.email_subject, body=result.email_body)

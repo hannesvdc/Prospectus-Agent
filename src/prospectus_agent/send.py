@@ -7,6 +7,7 @@ OAuth increment (see docs/auto-send-design.md, task 7).
 from __future__ import annotations
 
 import base64
+import sqlite3
 from email.message import EmailMessage
 from email.utils import make_msgid
 
@@ -34,7 +35,9 @@ def _is_personal(contact) -> bool:
     return bool((contact["name"] or "").strip())
 
 
-def select_recipients(contacts, *, max_recipients: int = 5):
+def select_recipients(
+    contacts: list[sqlite3.Row], *, max_recipients: int = 5
+) -> tuple[list[str], list[str]]:
     """Return (to, bcc) email lists per the delivery policy (§6 of the design doc):
 
     - **To:** personal public/verified/inferred addresses + a public generic inbox.
@@ -67,12 +70,13 @@ def select_recipients(contacts, *, max_recipients: int = 5):
     return ([c["email"] for c in to], [c["email"] for c in bcc])
 
 
-def _cap(to, bcc, max_recipients):
+def _cap(to: list[sqlite3.Row], bcc: list[sqlite3.Row],
+         max_recipients: int) -> tuple[list[sqlite3.Row], list[sqlite3.Row]]:
     """De-dup across To/Bcc (To wins) and enforce the recipient cap: drop lowest-
     confidence first (Bcc before To), but always keep at least one personal in To."""
     seen: set[str] = set()
 
-    def dedup(rows):
+    def dedup(rows: list[sqlite3.Row]) -> list[sqlite3.Row]:
         out = []
         for c in sorted(rows, key=_rank, reverse=True):
             e = (c["email"] or "").strip().lower()
@@ -103,7 +107,9 @@ def generate_message_id() -> str:
     return make_msgid(domain=domain)
 
 
-def build_message(email_row, to, bcc, *, thread_refs=None, footer_html=""):
+def build_message(email_row: sqlite3.Row, to: list[str], bcc: list[str], *,
+                  thread_refs: sqlite3.Row | None = None,
+                  footer_html: str = "") -> tuple[EmailMessage, str]:
     """Build the outbound EmailMessage. Returns (message, message_id). For a follow-up,
     pass `thread_refs` (from db.get_thread_refs) to thread it: reuse the original subject
     as `Re: …` and set In-Reply-To/References to the original's Message-ID. `footer_html`
@@ -137,7 +143,7 @@ def gmail_service():
     """Build an authenticated Gmail API client from the OAuth refresh token in config.
     Lazy-imports google-* so the package works (and tests run) without them installed —
     dry-run needs none. Raises RuntimeError with clear guidance if creds/libs are missing."""
-    if not (config.GMAIL_CLIENT_ID and config.GMAIL_CLIENT_SECRET and config.GMAIL_REFRESH_TOKEN):
+    if not config.gmail_configured():
         raise RuntimeError(
             "Gmail credentials missing — set GMAIL_CLIENT_ID / GMAIL_CLIENT_SECRET / "
             "GMAIL_REFRESH_TOKEN in .env (run `python -m prospectus_agent.gmail_auth` once)."
@@ -158,7 +164,8 @@ def gmail_service():
     return build("gmail", "v1", credentials=creds, cache_discovery=False)
 
 
-def send_via_gmail(message, *, thread_id=None, service=None):
+def send_via_gmail(message: EmailMessage, *, thread_id: str | None = None,
+                   service=None) -> dict:
     """Send an EmailMessage via the Gmail API as the authenticated user (lands in Sent).
     Returns the API response (with 'id' and 'threadId'). Pass a shared `service` and,
     for a follow-up, the original `thread_id` to keep it in the same conversation."""

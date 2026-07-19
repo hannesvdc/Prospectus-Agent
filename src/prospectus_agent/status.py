@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import sqlite3
 import sys
 
 
@@ -33,11 +34,11 @@ from prospectus_agent import db  # noqa: E402
 from prospectus_agent import runner  # noqa: E402
 
 
-def _conn():
+def _conn() -> sqlite3.Connection:
     return runner.open_db()
 
 
-def cmd_list(args):
+def cmd_list(args: argparse.Namespace) -> None:
     conn = _conn()
     if args.status:
         rows = conn.execute(
@@ -58,7 +59,7 @@ def cmd_list(args):
               f"{(r['last_contact_date'] or '-'):<14}{r['name']}")
 
 
-def cmd_show(args):
+def cmd_show(args: argparse.Namespace) -> None:
     conn = _conn()
     c = db.get_company_by_domain(conn, args.domain)
     if not c:
@@ -84,7 +85,7 @@ def cmd_show(args):
             print("  " + em["body"].replace("\n", "\n  "))
 
 
-def cmd_mark(args):
+def cmd_mark(args: argparse.Namespace) -> None:
     conn = _conn()
     if args.status not in db.VALID_STATUSES:
         print(f"Invalid status. Valid: {sorted(db.VALID_STATUSES)}")
@@ -98,7 +99,7 @@ def cmd_mark(args):
     print(f"Marked {args.domain} as '{args.status}'.{extra}")
 
 
-def cmd_drafts(args):
+def cmd_drafts(args: argparse.Namespace) -> None:
     conn = _conn()
     rows = conn.execute(
         "SELECT * FROM companies WHERE status='drafted' ORDER BY fit_score DESC"
@@ -111,7 +112,7 @@ def cmd_drafts(args):
         print(f"  {r['domain']:<32} score {r['fit_score']}  {r['name']}")
 
 
-def main():
+def main() -> None:
     p = argparse.ArgumentParser(description="Manual outreach status tracker.")
     p.add_argument(
         "--profile", metavar="NAME",

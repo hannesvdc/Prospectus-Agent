@@ -64,7 +64,7 @@ def _load_settings() -> dict:
 _SETTINGS = _load_settings()
 
 
-def _raw(name: str):
+def _raw(name: str) -> str | None:
     """Effective raw value for a tunable, as a string or None. Precedence:
     profile `settings:` (per-business) > environment (.env / shell) > None.
     (Secrets like the API key are read straight from the env, not via this.)"""
@@ -180,6 +180,12 @@ GMAIL_CLIENT_ID = (_raw("GMAIL_CLIENT_ID") or "").strip()
 GMAIL_CLIENT_SECRET = (_raw("GMAIL_CLIENT_SECRET") or "").strip()
 GMAIL_REFRESH_TOKEN = (_raw("GMAIL_REFRESH_TOKEN") or "").strip()
 
+
+def gmail_configured() -> bool:
+    """True if all three Gmail OAuth credentials are present (live sending is possible)."""
+    return bool(GMAIL_CLIENT_ID and GMAIL_CLIENT_SECRET and GMAIL_REFRESH_TOKEN)
+
+
 def autosend_allowed() -> bool:
     """True if the active profile is allowed to auto-send (else dry-run only)."""
     return (PROFILE or "open-numerics").lower() in AUTOSEND_PROFILES
@@ -198,20 +204,26 @@ def size_allowed(size: str) -> bool:
     return size_rank(size) <= size_rank(MAX_COMPANY_SIZE)
 
 
+VENDORS = ("anthropic", "openai")
 _VENDOR_KEYS = {"anthropic": "ANTHROPIC_API_KEY", "openai": "OPENAI_API_KEY"}
+
+
+def unknown_vendor(vendor: str) -> str:
+    """The standard 'unrecognized vendor' message; callers pick the exception type."""
+    expected = " or ".join(f"'{v}'" for v in VENDORS)
+    return f"Unknown vendor '{vendor}' (expected {expected})."
 
 
 def require_api_key(vendor: str) -> str:
     """Return the API key for `vendor` or raise a clear error if it is missing."""
     vendor = vendor.lower()
-    key = {"anthropic": ANTHROPIC_API_KEY, "openai": OPENAI_API_KEY}.get(vendor)
-    if key is None:
-        raise RuntimeError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")
+    if vendor not in _VENDOR_KEYS:
+        raise RuntimeError(unknown_vendor(vendor))
+    key = {"anthropic": ANTHROPIC_API_KEY, "openai": OPENAI_API_KEY}[vendor]
     if not key:
-        env = _VENDOR_KEYS[vendor]
         raise RuntimeError(
-            f"{env} is not set. Add it to the .env file (see .env.example) before "
-            f"running steps that use the '{vendor}' vendor."
+            f"{_VENDOR_KEYS[vendor]} is not set. Add it to the .env file (see "
+            f".env.example) before running steps that use the '{vendor}' vendor."
         )
     return key
 
@@ -226,4 +238,4 @@ def get_client(vendor: str):
     if vendor == "openai":
         from openai import OpenAI
         return OpenAI(api_key=require_api_key("openai"))
-    raise RuntimeError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")
+    raise RuntimeError(unknown_vendor(vendor))

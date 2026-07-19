@@ -11,6 +11,7 @@ without re-discovering or re-researching anything.
 """
 from __future__ import annotations
 
+import sqlite3
 from datetime import date
 
 from prospectus_agent import db
@@ -29,7 +30,8 @@ SUBMIT_REFINED_TOOL = submit_email_tool(
 )
 
 
-def refine_email(client, conn, email_row, on_profile: str) -> dict:
+def refine_email(client, conn: sqlite3.Connection, email_row: sqlite3.Row,
+                 on_profile: str) -> dict:
     """Rewrite one existing draft in place. Returns a summary dict."""
     company = db.get_company(conn, email_row["company_id"])
     summary = {
@@ -64,8 +66,8 @@ def refine_email(client, conn, email_row, on_profile: str) -> dict:
     return summary
 
 
-def refine_today(client, conn, on_profile: str, *, today: str | None = None,
-                 email_type: str = "initial") -> list[dict]:
+def refine_today(client, conn: sqlite3.Connection, on_profile: str, *,
+                 today: str | None = None, email_type: str = "initial") -> list[dict]:
     """Refine every draft of `email_type` created today (default initial emails)."""
     today = today or date.today().isoformat()
     emails = [e for e in db.emails_on(conn, today) if e["type"] == email_type]
@@ -78,7 +80,7 @@ def refine_today(client, conn, on_profile: str, *, today: str | None = None,
     return summaries
 
 
-def refine_followups(client, conn, on_profile: str) -> list[dict]:
+def refine_followups(client, conn: sqlite3.Connection, on_profile: str) -> list[dict]:
     """Re-draft every currently-due follow-up IN PLACE with the current follow-up
     prompt/voice (uses the follow-up prompt, not the initial-email rules). Returns a
     summary list."""

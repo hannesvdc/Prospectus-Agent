@@ -21,6 +21,7 @@ from __future__ import annotations
 import html
 import os
 import re
+import sqlite3
 from datetime import date
 
 from prospectus_agent import agent_profile
@@ -31,7 +32,7 @@ from prospectus_agent import db
 _TRUSTED = ("public", "verified")  # published, or confirmed deliverable
 
 
-def _split_contacts(contacts):
+def _split_contacts(contacts: list[sqlite3.Row]) -> tuple[list[sqlite3.Row], list[sqlite3.Row]]:
     # Trusted = a real published address or one confirmed deliverable by
     # verification. Everything else (pattern-"inferred", blind-"guessed") is
     # unverified and grouped together, each keeping its own tag so the sender can
@@ -41,10 +42,14 @@ def _split_contacts(contacts):
     return public, guessed
 
 
-def _contact_label(c) -> str:
+def _contact_tag(c) -> str:
+    """Confidence tag with the person's name/role, e.g. 'inferred — Jane Doe, CTO'."""
     who = ", ".join(p for p in (c["name"], c["role"]) if p)
-    tag = c["email_confidence"] + (f" — {who}" if who else "")
-    return f"- {c['email']}  ({tag})"
+    return c["email_confidence"] + (f" — {who}" if who else "")
+
+
+def _contact_label(c) -> str:
+    return f"- {c['email']}  ({_contact_tag(c)})"
 
 
 def _recipient_line(contacts) -> str:
@@ -62,17 +67,27 @@ def _recipient_line(contacts) -> str:
     return ", ".join(emails)
 
 
-def _email_block(conn, em) -> str | None:
+def _email_block_data(conn: sqlite3.Connection, em: sqlite3.Row) -> tuple | None:
+    """Shared prologue for the markdown and HTML renderers. Returns
+    (company, contacts, public, guessed, kind, meta, recipients), or None if the
+    company row is gone."""
     company = db.get_company(conn, em["company_id"])
     if company is None:
         return None
     contacts = db.get_contacts(conn, em["company_id"])
     public, guessed = _split_contacts(contacts)
-
-    lines = []
     kind = " (follow-up)" if em["type"] == "followup" else ""
-    lines.append(f"## {company['name']} ({company['domain']}){kind}")
     meta = " · ".join(p for p in (company["industry"], company["hq_location"]) if p)
+    return company, contacts, public, guessed, kind, meta, _recipient_line(contacts)
+
+
+def _email_block(conn, em) -> str | None:
+    data = _email_block_data(conn, em)
+    if data is None:
+        return None
+    company, contacts, public, guessed, kind, meta, recipients = data
+
+    lines = [f"## {company['name']} ({company['domain']}){kind}"]
     if meta:
         lines.append(f"_{meta}_")
     lines.append("\n**Send to:**")
@@ -82,7 +97,6 @@ def _email_block(conn, em) -> str | None:
         lines.append("- (no contacts found)")
     if not public and guessed:
         lines.append("> No published address found — these are best-guess addresses; verify before sending.")
-    recipients = _recipient_line(contacts)
     if recipients:
         lines.append(f"\n**To (copy):** `{recipients}`")
     lines.append(f"\n**Subject:** {em['subject']}\n")
@@ -110,33 +124,27 @@ def _linkify_body(body: str) -> str:
 
 
 def _email_block_html(conn, em) -> str | None:
-    company = db.get_company(conn, em["company_id"])
-    if company is None:
+    data = _email_block_data(conn, em)
+    if data is None:
         return None
-    contacts = db.get_contacts(conn, em["company_id"])
-    public, guessed = _split_contacts(contacts)
+    company, contacts, public, guessed, kind, meta, recipients = data
 
-    kind = " (follow-up)" if em["type"] == "followup" else ""
     parts = [f"<h2>{html.escape(company['name'])} "
              f"({html.escape(company['domain'])}){kind}</h2>"]
-    meta = " · ".join(p for p in (company["industry"], company["hq_location"]) if p)
     if meta:
         parts.append(f"<p><em>{html.escape(meta)}</em></p>")
 
     parts.append("<p><strong>Send to:</strong></p><ul>")
     if contacts:
         for c in contacts:
-            who = ", ".join(p for p in (c["name"], c["role"]) if p)
-            tag = c["email_confidence"] + (f" — {who}" if who else "")
             parts.append(f"<li>{html.escape(c['email'])} "
-                         f"({html.escape(tag)})</li>")
+                         f"({html.escape(_contact_tag(c))})</li>")
     else:
         parts.append("<li>(no contacts found)</li>")
     parts.append("</ul>")
     if not public and guessed:
         parts.append("<p><em>No published address found — these are best-guess "
                      "addresses; verify before sending.</em></p>")
-    recipients = _recipient_line(contacts)
     if recipients:
         parts.append(f"<p><strong>To (copy):</strong> "
                      f"<code>{html.escape(recipients)}</code></p>")
@@ -189,8 +197,9 @@ def _write_group(conn, out_dir, today, basename, title, emails, overwrite) -> in
     return len(md_blocks)
 
 
-def generate(conn, *, out_root: str | None = None, today: str | None = None,
-             since_email_id: int | None = None, overwrite: bool = False):
+def generate(conn: sqlite3.Connection, *, out_root: str | None = None,
+             today: str | None = None, since_email_id: int | None = None,
+             overwrite: bool = False) -> tuple[str, int] | None:
     """Write today's drafts under <out_root>/<date>/, splitting new prospect emails
     (new_prospects.md/.html) from follow-ups (followups.md/.html).
 
@@ -218,8 +227,9 @@ def generate(conn, *, out_root: str | None = None, today: str | None = None,
     return (out_dir, total) if total else None
 
 
-def write_file(conn, emails, *, basename: str, title: str,
-               out_root: str | None = None, today: str | None = None):
+def write_file(conn: sqlite3.Connection, emails: list[sqlite3.Row], *, basename: str,
+               title: str, out_root: str | None = None,
+               today: str | None = None) -> tuple[str, int] | None:
     """Write an EXPLICIT list of email rows to <out_root>/<today>/<basename>.{md,html},
     overwriting that file. Unlike generate(), this ignores each email's date — it
     surfaces a curated set (e.g. ALL currently-due follow-ups) into today's folder,

@@ -1,6 +1,7 @@
 [project]
 name = "prospectus-agent"
-version = "1.0.0"
+# Single source of truth: prospectus_agent.__version__ (see [tool.setuptools.dynamic]).
+dynamic = ["version"]
 description = "Daily AI agent that finds prospective clients and drafts tailored outreach emails."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,6 +40,11 @@ build-backend = "setuptools.build_meta"
 # The [project] dependencies above are the source of truth that requirements*.txt mirror.
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Version is read from prospectus_agent/__init__.py's __version__ at build time, so it
+# lives in exactly one place. Bump it there.
+[tool.setuptools.dynamic]
+version = { attr = "prospectus_agent.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

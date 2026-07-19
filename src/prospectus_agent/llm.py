@@ -171,7 +171,7 @@ def _anthropic_create(client, *, model, system, messages, tools, max_tokens):
     return resp
 
 
-def _anthropic_tool_input(response, name):
+def _anthropic_tool_input(response, name: str) -> dict | None:
     for block in getattr(response, "content", []) or []:
         if getattr(block, "type", None) == "tool_use" and getattr(block, "name", None) == name:
             return getattr(block, "input", None)
@@ -196,7 +196,8 @@ def _anthropic_drain(client, *, model, system, messages, tools, max_tokens):
     return resp
 
 
-def _anthropic_run_with_submit(client, *, model, system, user_text, tools, submit_tool_name, max_tokens):
+def _anthropic_run_with_submit(client, *, model, system, user_text, tools,
+                               submit_tool_name, max_tokens) -> dict | None:
     messages = [{"role": "user", "content": user_text}]
     resp = _anthropic_drain(client, model=model, system=system, messages=messages,
                             tools=tools, max_tokens=max_tokens)
@@ -213,7 +214,7 @@ def _anthropic_run_with_submit(client, *, model, system, user_text, tools, submi
     return _strip_citations(args) if args is not None else None
 
 
-def _anthropic_run_text(client, *, model, system, user_text, tools, max_tokens):
+def _anthropic_run_text(client, *, model, system, user_text, tools, max_tokens) -> str:
     messages = [{"role": "user", "content": user_text}]
     resp = _anthropic_drain(client, model=model, system=system, messages=messages,
                             tools=tools, max_tokens=max_tokens)
@@ -235,7 +236,7 @@ def _openai_create(client, *, model, system, input, tools, max_output_tokens, ef
     return resp
 
 
-def _openai_call_args(response, name):
+def _openai_call_args(response, name: str) -> str | None:
     for item in getattr(response, "output", []) or []:
         if getattr(item, "type", None) == "function_call" and getattr(item, "name", None) == name:
             return item.arguments
@@ -243,7 +244,7 @@ def _openai_call_args(response, name):
 
 
 def _openai_run_with_submit(client, *, model, system, user_text, tools, submit_tool_name,
-                            max_output_tokens, effort):
+                            max_output_tokens, effort) -> dict | None:
     resp = _openai_create(client, model=model, system=system, input=user_text,
                           tools=tools, max_output_tokens=max_output_tokens, effort=effort)
     raw = _openai_call_args(resp, submit_tool_name)
@@ -264,7 +265,7 @@ def _openai_run_with_submit(client, *, model, system, user_text, tools, submit_t
         return None
 
 
-def _openai_run_text(client, *, model, system, user_text, tools, max_output_tokens, effort):
+def _openai_run_text(client, *, model, system, user_text, tools, max_output_tokens, effort) -> str:
     resp = _openai_create(client, model=model, system=system, input=user_text,
                           tools=tools, max_output_tokens=max_output_tokens, effort=effort)
     return (getattr(resp, "output_text", "") or "").strip()
@@ -286,20 +287,18 @@ def run_with_submit(
 ) -> Optional[dict]:
     """Run a turn (optionally with web_search) and return the validated arguments
     of the `submit_tool_name` call, or None if the model never called it."""
-    if vendor not in ("anthropic", "openai"):
-        raise ValueError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")
+    if vendor not in config.VENDORS:
+        raise ValueError(config.unknown_vendor(vendor))
     client = clients.get(vendor)
     if vendor == "anthropic":
         return _anthropic_run_with_submit(
             client, model=model, system=system, user_text=user_text,
             tools=_to_anthropic_tools(tools), submit_tool_name=submit_tool_name,
             max_tokens=max_output_tokens)
-    if vendor == "openai":
-        return _openai_run_with_submit(
-            client, model=model, system=system, user_text=user_text,
-            tools=_to_openai_tools(tools), submit_tool_name=submit_tool_name,
-            max_output_tokens=max_output_tokens, effort=effort)
-    raise ValueError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")
+    return _openai_run_with_submit(
+        client, model=model, system=system, user_text=user_text,
+        tools=_to_openai_tools(tools), submit_tool_name=submit_tool_name,
+        max_output_tokens=max_output_tokens, effort=effort)
 
 
 def run_writer(clients, *, system: str, user_text: str, tools: list,
@@ -341,13 +340,13 @@ def run_text(
     effort: Optional[str] = None,
 ) -> str:
     """Run a turn (optionally with web_search) and return the final text."""
+    if vendor not in config.VENDORS:
+        raise ValueError(config.unknown_vendor(vendor))
     client = clients.get(vendor)
     tools = tools or []
     if vendor == "anthropic":
         return _anthropic_run_text(client, model=model, system=system, user_text=user_text,
                                    tools=_to_anthropic_tools(tools), max_tokens=max_output_tokens)
-    if vendor == "openai":
-        return _openai_run_text(client, model=model, system=system, user_text=user_text,
-                                tools=_to_openai_tools(tools), max_output_tokens=max_output_tokens,
-                                effort=effort)
-    raise ValueError(f"Unknown vendor '{vendor}' (expected 'anthropic' or 'openai').")
+    return _openai_run_text(client, model=model, system=system, user_text=user_text,
+                            tools=_to_openai_tools(tools), max_output_tokens=max_output_tokens,
+                            effort=effort)

@@ -36,9 +36,9 @@ def main(followup: bool = False, refine: bool = False, sent: bool = False,
               f"{paths.HOME}). Create one (see profile.example.yaml).")
         return 0
 
-    extra = (["--followup"] if followup else []) + \
-            (["--refine"] if refine else []) + (["--sent"] if sent else []) + \
-            (["--deliver"] if deliver else []) + (["--live"] if live else [])
+    extra = [flag for flag, on in (
+        ("--followup", followup), ("--refine", refine), ("--sent", sent),
+        ("--deliver", deliver), ("--live", live)) if on]
     label = " ".join(extra) if extra else "daily pipeline"
     print(f"Running `{label}` for {len(names)} profile(s): {', '.join(names)}\n")
 

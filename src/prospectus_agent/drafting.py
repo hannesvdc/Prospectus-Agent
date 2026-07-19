@@ -3,6 +3,8 @@ prompts/ (prompts.followup).
 """
 from __future__ import annotations
 
+import sqlite3
+
 from prospectus_agent import db
 from prospectus_agent.llm import run_writer, submit_email_tool
 from prospectus_agent.prompts import followup as followup_prompts
@@ -12,7 +14,8 @@ SUBMIT_FOLLOWUP_TOOL = submit_email_tool(
     "submit_followup", "Submit the drafted follow-up email.")
 
 
-def draft_followup(client, conn, company_row, on_profile: str, *, final: bool = False):
+def draft_followup(client, conn: sqlite3.Connection, company_row: sqlite3.Row,
+                   on_profile: str, *, final: bool = False) -> FollowUpResult | None:
     """Draft a follow-up for a company that hasn't replied. `final=True` produces the
     short second/last follow-up. Returns a FollowUpResult or None. No web tools — it
     references the prior email."""
