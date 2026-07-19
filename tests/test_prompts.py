@@ -27,6 +27,19 @@ def test_prompts_use_profile_name(monkeypatch):
     assert "Acme Consulting" in dprompt.system()
 
 
+def test_closing_style_switches_the_ask(monkeypatch):
+    from prospectus_agent import agent_profile
+
+    monkeypatch.setattr(agent_profile, "CLOSING_STYLE", "feedback")
+    fb = rprompt.email_rules().lower()
+    assert "demonstration" in fb and "run it through" in fb
+    assert "intro call" not in fb          # feedback close never asks for a call
+
+    monkeypatch.setattr(agent_profile, "CLOSING_STYLE", "call")
+    call = rprompt.email_rules().lower()
+    assert "intro call" in call
+
+
 def test_discovery_build_user_interpolates():
     out = dprompt.build_user(
         "ON PROFILE TEXT", [{"name": "Acme", "domain": "acme.com"}], "aerospace and energy"

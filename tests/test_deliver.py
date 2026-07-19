@@ -76,6 +76,33 @@ def test_daily_cap_stops_early(conn, monkeypatch, capsys):
     assert "Would send: 1" in out and "daily cap" in out
 
 
+def _due_followup(conn, domain):
+    """A company that's overdue for a follow-up, with a follow-up draft ready to send."""
+    cid = db.upsert_company(
+        conn, name=domain.split(".")[0].title(), domain=domain, hq_location="", industry="",
+        fit_score=9, why_fit="x", suggested_applications=[], source_urls=[], status="drafted",
+    )
+    db.add_contact(conn, cid, name="Jane Doe", role="CTO",
+                   email=f"jane.doe@{domain}", email_confidence="verified")
+    db.set_status(conn, domain, "sent", contact_date="2020-01-01")   # long past -> due
+    db.add_email(conn, cid, type="followup", subject=f"Re: Hi {domain}", body="Following up.")
+    return cid
+
+
+def test_followups_ignore_the_daily_cap(conn, monkeypatch, capsys):
+    """The cap is a cold-outreach guardrail; follow-ups (warm contacts) are uncapped."""
+    _use_conn(monkeypatch, conn)
+    monkeypatch.setattr(deliver_run.config, "AUTOSEND_DAILY_MAX", 1)
+    for d in ("acme.com", "beta.com", "gamma.com"):
+        _due_followup(conn, d)
+
+    deliver_run.main(followup=True, live=False)
+    out = capsys.readouterr().out
+    assert "Would send: 3" in out          # all three, despite cap=1
+    assert "no cap (follow-ups)" in out
+    assert "daily cap" not in out
+
+
 def test_live_send_records_and_advances_status(conn, monkeypatch, capsys):
     _use_conn(monkeypatch, conn)
     # Enable the live path with the Gmail API fully stubbed (no libs / no network).

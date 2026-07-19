@@ -100,6 +100,42 @@ def _opening_step(opener_examples: str, voice_notes: str) -> str:
            needs (no "your work suggests you need…").{voice_notes}""")
 
 
+def _closing_step() -> str:
+    """Step 3 of the email body. Two shapes, chosen by profile.CLOSING_STYLE:
+    'feedback' asks for ONE concrete input (a workflow they'd want, or a bottleneck
+    they face) instead of a call; anything else asks for a short intro call."""
+    if profile.CLOSING_STYLE == "feedback":
+        return (
+            f"""3. Close with a CLEAR, WARM ask as its OWN short paragraph of two to three
+           sentences. OPEN with a direct question that puts one concrete thing to them,
+           e.g. "What's the one workflow or computation that would help you reach your
+           goals faster?" (or the biggest computational bottleneck slowing you down).
+           Then follow with a LIGHT, confident demonstration offer that CLOSES THE LOOP
+           BACK TO THEM: offer to run it through {profile.NAME} and get them concrete
+           results on their OWN problem, and END on what it would mean for THEIR work, not
+           on what the product does. The question is the ask; keep it clear and genuine.
+           Do NOT command the prospect to do work (no "Send it over", "Send us", "Share
+           it", "Point me to it") and do NOT be insistent (no "Whatever it is, I'll...").
+           Do NOT hedge or grovel either (no "If you send over...", "we'd be glad to", "if
+           it's useful", "no meeting needed", "just a reply", no conditional opener). It
+           is NOT a request for a call or meeting. Full example: "What's the one
+           computation that would move your work forward fastest? I can run it through
+           {profile.NAME} and get you concrete results on your own problem, so you can see
+           exactly what it would mean for your work."\"""")
+    return (
+        f"""3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
+           intro call), framed around the VALUE to them — e.g. "to see where we could
+           help" or "to explore how {profile.NAME} could create value for your team".
+           Make it concrete and to the point. Do NOT use vague, weak phrasings like
+           "to see whether there's a fit" or "if it would be useful". Above all, do NOT
+           open the ask with a conditional that presupposes it might not be worth their
+           time — never start with "If it's useful,", "If that's helpful,", "If it
+           would be valuable,", or similar. State the ask directly (e.g. "I'd love to
+           set up a short intro call to explore where {profile.NAME} could create value
+           for your team"). Keep it warm and pressure-free, but the ask should sound
+           purposeful and assume the value is real.""")
+
+
 def email_rules() -> str:
     """The subject + body writing rules for an outreach email. Shared by the
     initial-draft prompt and the refine/redraft prompt so the two never drift.
@@ -168,17 +204,7 @@ def email_rules() -> str:
            on as a separate "We also do X" sentence — two woven in, then stop. Do NOT
            hedge ("we'd most likely help", "we may be able to", "that could mean"). Keep every claim
            truthful — don't invent metrics, numbers, or internal details.
-        3. Close with a clear, low-pressure ask for a short next step (e.g. a brief
-           intro call), framed around the VALUE to them — e.g. "to see where we could
-           help" or "to explore how {profile.NAME} could create value for your team".
-           Make it concrete and to the point. Do NOT use vague, weak phrasings like
-           "to see whether there's a fit" or "if it would be useful". Above all, do NOT
-           open the ask with a conditional that presupposes it might not be worth their
-           time — never start with "If it's useful,", "If that's helpful,", "If it
-           would be valuable,", or similar. State the ask directly (e.g. "I'd love to
-           set up a short intro call to explore where {profile.NAME} could create value
-           for your team"). Keep it warm and pressure-free, but the ask should sound
-           purposeful and assume the value is real.
+        {_closing_step()}
       Use a neutral greeting ("Hi there,").{credibility_note} {SIGNOFF_RULE}"""
 
 

@@ -78,6 +78,13 @@ VOICE_NOTES = [_clean(n) for n in (_company.get("voice_notes") or []) if str(n).
 # client's problem while another stays product/intro-led.
 OPENING_STYLE = _clean(_company.get("opening_style", "")).lower() or "intro"
 
+# Optional closing style for the email body. "feedback" makes a low-commitment
+# demonstration offer (invite one workflow they'd want or a bottleneck they face, and
+# offer to run it through the product and show the result) instead of a call; anything
+# else (default "call") asks for a short intro call. Per-profile, so a product-led
+# business can invite a demo while a services one asks for a meeting.
+CLOSING_STYLE = _clean(_company.get("closing_style", "")).lower() or "call"
+
 # Optional recent product/research innovations to surface in FOLLOW-UP emails as a
 # "here's what's new since we first wrote" beat. List of short phrases; each is
 # collapsed to a tidy block. Empty list if unset (follow-ups then omit the beat).

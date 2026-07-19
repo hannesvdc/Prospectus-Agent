@@ -162,18 +162,54 @@ def test_profile_flag_rejects_bad_name(monkeypatch):
         cli.main(["--profile", "../etc/passwd"])
 
 
-def test_deliver_routes_to_deliver_run(monkeypatch):
+def test_deliver_no_profile_fans_out_all_profiles(monkeypatch):
     _isolate_env(monkeypatch)
     calls = []
-    monkeypatch.setattr("prospectus_agent.daily_run.main", lambda: 0)
+    monkeypatch.setattr(
+        "prospectus_agent.run_all.main",
+        lambda followup=False, refine=False, sent=False, deliver=False, live=False:
+            calls.append((followup, deliver, live)) or 0,
+    )
+    # No --profile => deliver fans out to every profile (each handles both scopes).
+    assert cli.main(["--deliver", "--live"]) == 0
+    assert cli.main(["--deliver"]) == 0
+    assert cli.main(["--deliver", "--followup", "--live"]) == 0
+    assert calls == [
+        (False, True, True),     # --deliver --live: both scopes, all profiles, send
+        (False, True, False),    # --deliver: both scopes, all profiles, dry-run
+        (True, True, True),      # --deliver --followup --live: follow-ups only, all, send
+    ]
+
+
+def _make_profile(monkeypatch, tmp_path, name="acme"):
+    from prospectus_agent import paths
+    monkeypatch.setattr(paths, "HOME", tmp_path)
+    (tmp_path / f"profile.{name}.yaml").write_text("company: {}\n")
+
+
+def test_deliver_with_profile_runs_both_scopes(monkeypatch, tmp_path):
+    _isolate_env(monkeypatch)
+    _make_profile(monkeypatch, tmp_path)
+    calls = []
     monkeypatch.setattr(
         "prospectus_agent.deliver_run.main",
         lambda followup=False, live=False: calls.append((followup, live)) or 0,
     )
-    assert cli.main(["--deliver"]) == 0
-    assert cli.main(["--deliver", "--live"]) == 0
-    assert cli.main(["--followup", "--deliver"]) == 0
-    assert calls == [(False, False), (False, True), (True, False)]
+    # One profile, plain --deliver => initials THEN follow-ups.
+    assert cli.main(["--profile", "acme", "--deliver", "--live"]) == 0
+    assert calls == [(False, True), (True, True)]
+
+
+def test_deliver_profile_followup_runs_followups_only(monkeypatch, tmp_path):
+    _isolate_env(monkeypatch)
+    _make_profile(monkeypatch, tmp_path)
+    calls = []
+    monkeypatch.setattr(
+        "prospectus_agent.deliver_run.main",
+        lambda followup=False, live=False: calls.append((followup, live)) or 0,
+    )
+    assert cli.main(["--profile", "acme", "--deliver", "--followup"]) == 0
+    assert calls == [(True, False)]
 
 
 def test_deliver_rejects_conflicting_actions(monkeypatch):

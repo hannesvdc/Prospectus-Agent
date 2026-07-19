@@ -92,12 +92,15 @@ def main(followup: bool = False, live: bool = False) -> int:
 
     candidates = _followup_candidates(conn) if followup else _initial_candidates(conn)
     mode = "SENDING" if live else "DRY RUN — nothing is sent"
-    print(f"[{mode}]  from {config.AUTOSEND_FROM}  ·  cap {config.AUTOSEND_DAILY_MAX}/run, "
+    # The daily cap is a spam-ramp guardrail for COLD initials only; follow-ups go to
+    # people we've already contacted, so they're uncapped.
+    cap_note = "no cap (follow-ups)" if followup else f"cap {config.AUTOSEND_DAILY_MAX}/run"
+    print(f"[{mode}]  from {config.AUTOSEND_FROM}  ·  {cap_note}, "
           f"{config.AUTOSEND_MAX_RECIPIENTS} recipients/email\n")
 
     done = skipped = 0
     for company, em, refs in candidates:
-        if done >= config.AUTOSEND_DAILY_MAX:
+        if not followup and done >= config.AUTOSEND_DAILY_MAX:
             print(f"  · daily cap ({config.AUTOSEND_DAILY_MAX}) reached — stopping.")
             break
         to, bcc = send.select_recipients(

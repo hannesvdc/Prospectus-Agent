@@ -4,8 +4,9 @@ CLI contract:
     prospectus-agent                       run the daily pipeline (discover + draft)
     prospectus-agent --refine              re-draft TODAY's emails with the current
                                            prompt (no new discovery or web research)
-    prospectus-agent --deliver             auto-send the in-scope drafts (dry-run;
-                                           add --live to really send)
+    prospectus-agent --deliver             send initials + due follow-ups for ALL
+                                           profiles (dry-run; add --live to really send;
+                                           --followup = follow-ups only; --profile = one)
     prospectus-agent --profile NAME        use a different business: loads
                                            profile.NAME.yaml + NAME.db + outbox/NAME/
                                            (combine with --refine)
@@ -66,9 +67,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--deliver",
         action="store_true",
-        help="Action: actually SEND the in-scope drafts from your Gmail (initial drafts, "
-             "or due follow-ups with --followup), threading follow-ups under the original. "
-             "DRY-RUN by default (logs what would send); add --live to really send. "
+        help="Action: SEND the drafts from your Gmail. Alone, sends BOTH new-prospect "
+             "initials AND due follow-ups; add --followup to send follow-ups only. "
+             "Without --profile it delivers for EVERY profile; with --profile, just that "
+             "one. DRY-RUN by default (logs what would send); add --live to really send. "
              "Can't combine with --refine/--sent.",
     )
     parser.add_argument(
@@ -124,6 +126,13 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return run_all.main(followup=args.followup, refine=args.refine, sent=args.sent,
                             deliver=args.deliver, live=args.live)
 
+    # `--deliver` with NO explicit --profile delivers for EVERY profile, so one command
+    # (`prospectus-agent --deliver --live`) sends the whole day's queue. Fans out one
+    # subprocess per profile (like --runall); each then delivers both scopes below.
+    if args.deliver and not args.profile:
+        from prospectus_agent import run_all
+        return run_all.main(deliver=True, live=args.live, followup=args.followup)
+
     # Importing paths loads .env (so DEFAULT_PROFILE is visible) and resolves HOME,
     # without yet computing config's path constants.
     from prospectus_agent import paths
@@ -131,11 +140,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if profile:
         _apply_profile(profile, paths.HOME)
 
-    # `--deliver` is an action that spans both scopes (initial drafts, or follow-ups with
-    # --followup), so it dispatches ahead of the follow-up branch.
+    # `--deliver` for a single profile: plain = BOTH new-prospect initials AND due
+    # follow-ups; with --followup, restrict to follow-ups only. DRY-RUN unless --live.
     if args.deliver:
         from prospectus_agent import deliver_run
-        return deliver_run.main(followup=args.followup, live=args.live)
+        if args.followup:
+            return deliver_run.main(followup=True, live=args.live)
+        rc = deliver_run.main(followup=False, live=args.live)      # new-prospect initials
+        return deliver_run.main(followup=True, live=args.live) or rc  # then due follow-ups
 
     # `--followup` selects the follow-up SCOPE; `--refine`/`--sent` are modifiers that
     # act within it. Without `--followup` the same modifiers act on the initial drafts,
