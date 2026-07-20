@@ -40,23 +40,25 @@ def main(followup: bool = False, refine: bool = False, sent: bool = False,
         ("--followup", followup), ("--refine", refine), ("--sent", sent),
         ("--deliver", deliver), ("--live", live)) if on]
     label = " ".join(extra) if extra else "daily pipeline"
-    print(f"Running `{label}` for {len(names)} profile(s): {', '.join(names)}\n")
+    # flush=True on every banner: subprocess stdout streams straight to the terminal, so
+    # unflushed parent prints would otherwise appear AFTER the output they introduce.
+    print(f"Running `{label}` for {len(names)} profile(s): {', '.join(names)}\n", flush=True)
 
     results: dict[str, int] = {}
     for name in names:
-        print("=" * 72)
-        print(f"▶  {name}  ({label})")
-        print("=" * 72)
+        print("=" * 72, flush=True)
+        print(f"▶  {name}  ({label})", flush=True)
+        print("=" * 72, flush=True)
         # Re-invoke ourselves for this profile, forwarding the action flags. Output
         # streams live.
         results[name] = subprocess.run(
             [sys.executable, "-m", "prospectus_agent", "--profile", name, *extra]
         ).returncode
 
-    print("\n" + "=" * 72)
-    print("RUN-ALL SUMMARY")
+    print("\n" + "=" * 72, flush=True)
+    print("RUN-ALL SUMMARY", flush=True)
     for name, rc in results.items():
-        print(f"  {'✓' if rc == 0 else '✗'} {name} (exit {rc})")
+        print(f"  {'✓' if rc == 0 else '✗'} {name} (exit {rc})", flush=True)
     return 0 if all(rc == 0 for rc in results.values()) else 1
 
 

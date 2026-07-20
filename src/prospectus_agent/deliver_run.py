@@ -48,6 +48,14 @@ def _followup_candidates(
     return out
 
 
+def _recipients_with_tags(emails: list[str], contacts: list[sqlite3.Row]) -> str:
+    """Render a recipient list annotating each address with its confidence, e.g.
+    'jane@acme.com (verified), info@acme.com (public)' — so a glance shows how solid
+    each address is (verified/public are real; inferred/guessed may bounce)."""
+    by_email = {c["email"]: c["email_confidence"] for c in contacts}
+    return ", ".join(f"{e} ({by_email.get(e, '?')})" for e in emails)
+
+
 def _record_send(conn: sqlite3.Connection, company: sqlite3.Row, em: sqlite3.Row,
                  message_id: str, resp: dict, *, followup: bool) -> None:
     """Persist a live send: store the ids on the email and advance the company's status
@@ -97,30 +105,40 @@ def main(followup: bool = False, live: bool = False) -> int:
     # people we've already contacted, so they're uncapped.
     cap_note = "no cap (follow-ups)" if followup else f"cap {config.AUTOSEND_DAILY_MAX}/run"
     print(f"[{mode}]  from {config.AUTOSEND_FROM}  ·  {cap_note}, "
-          f"{config.AUTOSEND_MAX_RECIPIENTS} recipients/email\n")
+          f"{config.AUTOSEND_MAX_RECIPIENTS} recipients/email")
+    print(f"  {len(candidates)} {scope} in the queue (drafted, not yet sent).\n")
 
-    done = skipped = 0
+    done = 0
+    skipped_names: list[str] = []
     for company, em, refs in candidates:
         if not followup and done >= config.AUTOSEND_DAILY_MAX:
-            print(f"  · daily cap ({config.AUTOSEND_DAILY_MAX}) reached — stopping.")
+            print(f"  · daily cap ({config.AUTOSEND_DAILY_MAX}) reached — "
+                  f"{len(candidates) - done} left for the next run.")
             break
-        to, bcc = send.select_recipients(
-            db.get_contacts(conn, company["id"]),
-            max_recipients=config.AUTOSEND_MAX_RECIPIENTS,
-        )
+
+        contacts = db.get_contacts(conn, company["id"])
+        to, bcc = send.select_recipients(contacts, max_recipients=config.AUTOSEND_MAX_RECIPIENTS)
         if not to:
-            print(f"  ✗ {company['domain']} — no deliverable recipients, skipped.")
-            skipped += 1
+            reason = ("no contacts on file" if not contacts
+                      else f"{len(contacts)} contact(s) found but none deliverable")
+            print(f"  ✗ SKIP  {company['name']} ({company['domain']}) — {reason}.")
+            skipped_names.append(company["name"])
             continue
 
         msg, message_id = send.build_message(em, to, bcc, thread_refs=refs, footer_html=footer)
-        threaded = (f"  ↳ threaded under {refs['gmail_thread_id']}"
-                    if refs and refs["gmail_thread_id"] else "")
-        arrow = "✓ sent" if live else "→ would send"
-        print(f"  {arrow}: {company['name']} ({company['domain']}){threaded}")
-        print(f"      To:  {', '.join(to)}")
+        # For a follow-up, note whether it threads under the original send or goes fresh.
+        if followup:
+            thread_note = ("threads under the original send"
+                           if refs and refs["gmail_thread_id"]
+                           else "no stored thread id — sends as a fresh email")
+        else:
+            thread_note = ""
+        arrow = "✓ SENT " if live else "→ WOULD SEND"
+        print(f"  {arrow} {company['name']} ({company['domain']})"
+              f"{'  ·  ' + thread_note if thread_note else ''}")
+        print(f"      To:  {_recipients_with_tags(to, contacts)}")
         if bcc:
-            print(f"      Bcc: {', '.join(bcc)}")
+            print(f"      Bcc: {_recipients_with_tags(bcc, contacts)}")
         print(f"      Subject: {msg['Subject']}")
 
         if live:
@@ -131,8 +149,10 @@ def main(followup: bool = False, live: bool = False) -> int:
                 time.sleep(config.AUTOSEND_PACING_SECONDS)
         done += 1
 
-    verb = "Sent" if live else "Would send"
-    print(f"\n{verb}: {done}   ·   skipped: {skipped}")
+    verb = "SENT" if live else "WOULD SEND"
+    print(f"\n{verb} {done} {scope}   ·   skipped: {len(skipped_names)}")
+    if skipped_names:
+        print(f"  skipped (no deliverable recipients): {', '.join(skipped_names)}")
     conn.close()
     return 0
 

@@ -47,7 +47,7 @@ def test_dry_run_reports_and_sends_nothing(conn, monkeypatch, capsys):
     out = capsys.readouterr().out
 
     assert rc == 0
-    assert "DRY RUN" in out and "Would send: 2" in out
+    assert "DRY RUN" in out and "WOULD SEND 2 new prospects" in out
     assert "jane.doe@acme.com" in out
     # Nothing marked sent by a dry run.
     cid = db.get_company_by_domain(conn, "acme.com")["id"]
@@ -61,7 +61,7 @@ def test_already_sent_is_skipped(conn, monkeypatch, capsys):
 
     deliver_run.main(followup=False, live=False)
     out = capsys.readouterr().out
-    assert "Would send: 1" in out          # only beta
+    assert "WOULD SEND 1 new prospects" in out   # only beta
     assert "beta.com" in out and "acme.com" not in out
 
 
@@ -73,7 +73,7 @@ def test_daily_cap_stops_early(conn, monkeypatch, capsys):
 
     deliver_run.main(followup=False, live=False)
     out = capsys.readouterr().out
-    assert "Would send: 1" in out and "daily cap" in out
+    assert "WOULD SEND 1 new prospects" in out and "daily cap" in out
 
 
 def _due_followup(conn, domain):
@@ -98,7 +98,7 @@ def test_followups_ignore_the_daily_cap(conn, monkeypatch, capsys):
 
     deliver_run.main(followup=True, live=False)
     out = capsys.readouterr().out
-    assert "Would send: 3" in out          # all three, despite cap=1
+    assert "WOULD SEND 3 follow-ups" in out       # all three, despite cap=1
     assert "no cap (follow-ups)" in out
     assert "daily cap" not in out
 
@@ -125,7 +125,7 @@ def test_live_send_records_and_advances_status(conn, monkeypatch, capsys):
     rc = deliver_run.main(followup=False, live=True)
     out = capsys.readouterr().out
 
-    assert rc == 0 and "SENDING" in out and "Sent: 1" in out
+    assert rc == 0 and "SENDING" in out and "SENT 1 new prospects" in out
     assert sent_to == ["jane.doe@acme.com"]
     cid = db.get_company_by_domain(conn, "acme.com")["id"]
     row = db.latest_email(conn, cid, "initial")
